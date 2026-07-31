@@ -1,0 +1,25 @@
+{% load static %}
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Sarang Buku{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/sarangbuku.css' %}">
+</head>
+<body>
+  <a class="sb-skip-link" href="#konten">Lewati ke konten</a>
+  <header class="border-bottom">
+    <div class="container py-3">
+      <a class="sb-wordmark" href="/">Sarang Buku</a>
+    </div>
+  </header>
+  <main id="konten" class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="container border-top py-4 mt-5">
+    <small>Sarang Buku (2026)</small>
+  </footer>
+</body>
+</html>

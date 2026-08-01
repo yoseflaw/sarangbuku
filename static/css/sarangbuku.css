@@ -58,3 +58,12 @@ a:hover {
   border: 1px solid var(--sb-border);
   border-radius: .5rem;
 }
+
+.sb-form-page {
+  max-width: 42rem;
+}
+
+.sb-checkbox-list {
+  display: grid;
+  gap: .75rem;
+}

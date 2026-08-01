@@ -11,8 +11,20 @@
 <body>
   <a class="sb-skip-link" href="#konten">Lewati ke konten</a>
   <header class="border-bottom">
-    <div class="container py-3">
+    <div class="container py-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
       <a class="sb-wordmark" href="/">Sarang Buku</a>
+      <nav class="d-flex flex-wrap align-items-center gap-3" aria-label="Akun">
+        {% if user.is_authenticated %}
+          <a href="{% url 'accounts:profile' %}">Profil</a>
+          <form method="post" action="{% url 'accounts:logout' %}" class="mb-0">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-link p-0 text-dark">Keluar</button>
+          </form>
+        {% else %}
+          <a href="{% url 'accounts:login' %}">Masuk</a>
+          <a href="/akun/daftar/">Daftar dengan undangan</a>
+        {% endif %}
+      </nav>
     </div>
   </header>
   <main id="konten" class="container">

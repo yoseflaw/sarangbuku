@@ -45,6 +45,11 @@ INSTALLED_APPS = [
 ]
 
 AUTH_USER_MODEL = "accounts.User"
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "accounts:profile"
+LOGOUT_REDIRECT_URL = "landing"
+DEFAULT_FROM_EMAIL = "Sarang Buku <noreply@sarangbuku.id>"
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

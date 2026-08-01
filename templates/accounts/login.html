@@ -27,6 +27,6 @@
   </form>
 
   <p class="mt-3"><a href="{% url 'accounts:password_reset' %}">Lupa kata sandi?</a></p>
-  <p>Belum punya akun? <a href="/akun/daftar/">Daftar dengan undangan</a>.</p>
+  <p>Belum punya akun? <a href="{% url 'accounts:register' %}">Daftar dengan undangan</a>.</p>
 </div>
 {% endblock %}

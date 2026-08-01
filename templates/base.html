@@ -22,7 +22,7 @@
           </form>
         {% else %}
           <a href="{% url 'accounts:login' %}">Masuk</a>
-          <a href="/akun/daftar/">Daftar dengan undangan</a>
+          <a href="{% url 'accounts:register' %}">Daftar dengan undangan</a>
         {% endif %}
       </nav>
     </div>

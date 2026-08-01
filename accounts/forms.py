@@ -3,7 +3,7 @@ from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 from django.db import transaction
 
 from .models import Invitation, SwapZone, User
-from .services import generate_invitation_code
+from .services import generate_invitation_code, redeem_invitation
 
 
 class InvitationAdminForm(forms.ModelForm):
@@ -28,6 +28,30 @@ class InvitationAdminForm(forms.ModelForm):
         if commit:
             invitation.save()
         return invitation
+
+
+class RegistrationForm(UserCreationForm):
+    invitation_code = forms.CharField(label="Kode undangan")
+
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ("invitation_code", "email", "display_name")
+
+    def clean_email(self):
+        email = User.objects.normalize_email(self.cleaned_data["email"]).lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("Email ini sudah terdaftar.")
+        return email
+
+    def save(self, commit=True):
+        if not commit:
+            raise ValueError("RegistrationForm must save atomically.")
+        return redeem_invitation(
+            code=self.cleaned_data["invitation_code"],
+            email=self.cleaned_data["email"],
+            display_name=self.cleaned_data["display_name"],
+            password=self.cleaned_data["password1"],
+        )
 
 
 class UserProfileForm(forms.ModelForm):

@@ -13,6 +13,7 @@ from . import views
 app_name = "accounts"
 
 urlpatterns = [
+    path("daftar/", views.register, name="register"),
     path("profil/", views.profile, name="profile"),
     path(
         "masuk/",

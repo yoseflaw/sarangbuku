@@ -223,5 +223,5 @@ __marimo__/
 # Agent-related
 .artifacts/
 references
-.superpowers
+docs
 AGENTS.md

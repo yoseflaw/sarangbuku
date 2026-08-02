@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Hapus Buku | Sarang Buku{% endblock %}
+
+{% block content %}
+<div class="py-5 mx-auto sb-form-page">
+  <h1 class="h2">Hapus Buku</h1>
+  
+  <div class="card mb-4">
+    <div class="card-body">
+      <p>Yakin ingin menghapus buku ini dari Lemarimu?</p>
+      <div class="border rounded p-3 mb-4 bg-light">
+        <h3 class="h6 mb-2">{{ copy.book.title }}</h3>
+        <p class="small text-secondary mb-1">{{ copy.book.authors }}</p>
+        <p class="small text-secondary mb-1">Kondisi: {{ copy.get_condition_display }}</p>
+        {% if copy.condition_note %}
+          <p class="small text-muted mb-0">{{ copy.condition_note }}</p>
+        {% endif %}
+      </div>
+      
+      <form method="post" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Hapus dari Lemari</button>
+      </form>
+      <a href="{% url 'books:shelf' %}" class="btn btn-outline-secondary ms-2">Batal</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -15,6 +15,7 @@
       <a class="sb-wordmark" href="/">Sarang Buku</a>
       <nav class="d-flex flex-wrap align-items-center gap-3" aria-label="Akun">
         {% if user.is_authenticated %}
+          <a href="{% url 'books:shelf' %}">Lemari</a>
           <a href="{% url 'accounts:profile' %}">Profil</a>
           <form method="post" action="{% url 'accounts:logout' %}" class="mb-0">
             {% csrf_token %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Ubah Buku | Sarang Buku{% endblock %}
+
+{% block content %}
+<div class="py-5 mx-auto sb-form-page">
+  <h1 class="h2">Ubah Buku</h1>
+  <p class="text-secondary">{{ copy.book.title }} — {{ copy.book.authors }}</p>
+
+  {% for message in messages %}
+    <div class="alert alert-success" role="status">{{ message }}</div>
+  {% endfor %}
+
+  <form method="post" novalidate class="card mb-4">
+    <div class="card-body">
+      {% csrf_token %}
+      {% if form.errors %}
+        <div class="alert alert-danger" role="alert">Periksa kembali data bukumu.</div>
+      {% endif %}
+
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.condition.id_for_label }}">{{ form.condition.label }}</label>
+        <select class="form-select{% if form.condition.errors %} is-invalid{% endif %}"
+                name="{{ form.condition.html_name }}" id="{{ form.condition.id_for_label }}" required>
+          {% for value, label in form.condition.field.choices %}
+            <option value="{{ value }}" {% if form.condition.value == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        {% for error in form.condition.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.condition_note.id_for_label }}">{{ form.condition_note.label }}</label>
+        <textarea class="form-control{% if form.condition_note.errors %} is-invalid{% endif %}"
+                  name="{{ form.condition_note.html_name }}"
+                  id="{{ form.condition_note.id_for_label }}" rows="3">{{ form.condition_note.value|default_if_none:'' }}</textarea>
+        <div class="form-text">{{ form.condition_note.help_text }}</div>
+        {% for error in form.condition_note.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+      </div>
+
+      <div class="mb-4">
+        <div class="form-check">
+          <input class="form-check-input{% if form.is_available.errors %} is-invalid{% endif %}" 
+                 type="checkbox" name="{{ form.is_available.html_name }}"
+                 id="{{ form.is_available.id_for_label }}" {% if form.is_available.value %}checked{% endif %}>
+          <label class="form-check-label" for="{{ form.is_available.id_for_label }}">{{ form.is_available.label }}</label>
+          {% for error in form.is_available.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button class="btn btn-dark" type="submit">Simpan</button>
+        <a href="{% url 'books:shelf' %}" class="btn btn-outline-secondary">Batal</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

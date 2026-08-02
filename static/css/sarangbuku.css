@@ -67,3 +67,16 @@ a:hover {
   display: grid;
   gap: .75rem;
 }
+
+.sb-book-cover {
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  width: 100%;
+}
+
+.sb-book-cover-placeholder {
+  align-items: center;
+  aspect-ratio: 2 / 3;
+  display: flex;
+  justify-content: center;
+}

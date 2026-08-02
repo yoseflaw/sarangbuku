@@ -1,6 +1,6 @@
 import json
 from collections.abc import Mapping
-from urllib.error import HTTPError, URLError
+from http.client import IncompleteRead
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -121,7 +121,7 @@ def search_open_library(query: str, *, timeout: float = 5.0) -> list[dict[str, s
             if response.status != 200:
                 raise OpenLibraryError(ERROR_MESSAGE)
             payload = json.load(response)
-    except (TimeoutError, HTTPError, URLError, json.JSONDecodeError, UnicodeError) as error:
+    except (OSError, IncompleteRead, json.JSONDecodeError, UnicodeError) as error:
         raise OpenLibraryError(ERROR_MESSAGE) from error
 
     if not isinstance(payload, Mapping) or not isinstance(payload.get("docs"), list):

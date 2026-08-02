@@ -1,4 +1,5 @@
 import json
+from http.client import IncompleteRead
 from unittest.mock import Mock, patch
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlsplit
@@ -74,7 +75,7 @@ class OpenLibraryClientTests(SimpleTestCase):
     def test_valid_isbn_search_uses_only_exact_isbn_parameter(self):
         self.set_response({"docs": [{"title": "Matilda"}]})
 
-        search_open_library("9780140328721")
+        search_open_library("978-0-14-032872-1")
 
         params = parse_qs(urlsplit(self.urlopen.call_args.args[0].full_url).query)
         self.assertEqual(params["isbn"], ["9780140328721"])
@@ -90,6 +91,19 @@ class OpenLibraryClientTests(SimpleTestCase):
             with self.subTest(failure=type(failure).__name__):
                 self.urlopen.reset_mock()
                 self.urlopen.side_effect = failure
+                with self.assertRaisesMessage(
+                    OpenLibraryError,
+                    "Open Library sedang tidak dapat dihubungi. Coba lagi atau masukkan buku secara manual.",
+                ):
+                    search_open_library("Matilda")
+
+    def test_response_read_failures_raise_conversational_error(self):
+        failures = (ConnectionResetError(), IncompleteRead(b"partial", 1))
+        for failure in failures:
+            with self.subTest(failure=type(failure).__name__):
+                self.set_response({"docs": [{"title": "Matilda"}]})
+                response = self.urlopen.return_value.__enter__.return_value
+                response.read.side_effect = failure
                 with self.assertRaisesMessage(
                     OpenLibraryError,
                     "Open Library sedang tidak dapat dihubungi. Coba lagi atau masukkan buku secara manual.",

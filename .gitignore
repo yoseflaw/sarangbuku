@@ -222,6 +222,7 @@ __marimo__/
 
 # Agent-related
 .artifacts/
+.worktrees/
 references
 docs
 AGENTS.md

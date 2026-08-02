@@ -60,11 +60,11 @@ Imported Open Library metadata becomes an ordinary local `Book`. The application
 
 Condition choices are:
 
-1. Like new
-2. Very good
-3. Good
-4. Fair
-5. Bad
+1. Like new -> Seperti Baru
+2. Very good -> Sangat Bagus
+3. Good -> Masih Bagus
+4. Fair -> Cukup Bagus
+5. Bad -> Sudah Buruk
 
 The Indonesian interface presents natural labels for these stored choices.
 

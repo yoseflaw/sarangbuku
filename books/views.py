@@ -1,10 +1,14 @@
+from urllib.parse import urlencode
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from .forms import BookCopyForm, CatalogSearchForm, ManualBookCopyForm
 from .models import Book, BookCopy, normalize_isbn
+from .open_library import OpenLibraryError, search_open_library
 
 
 def _active_zone_redirect(request):
@@ -98,3 +102,37 @@ def manual_create(request):
         messages.success(request, "Buku sudah ditambahkan ke Lemari.")
         return redirect("books:shelf")
     return render(request, "books/manual_form.html", {"form": form})
+
+
+@login_required
+def open_library_search(request):
+    if response := _active_zone_redirect(request):
+        return response
+
+    form = CatalogSearchForm(request.GET or None)
+    external_results = []
+    external_error = None
+
+    if form.is_valid():
+        try:
+            external_results = search_open_library(form.cleaned_data["q"])
+            for result in external_results:
+                prefill = {
+                    name: result.get(name, "")
+                    for name in ("title", "authors", "isbn", "language", "cover_url")
+                }
+                result["add_url"] = (
+                    f"{reverse('books:manual_create')}?{urlencode(prefill)}"
+                )
+        except OpenLibraryError as error:
+            external_error = str(error)
+
+    return render(
+        request,
+        "books/add.html",
+        {
+            "form": form,
+            "external_results": external_results,
+            "external_error": external_error,
+        },
+    )

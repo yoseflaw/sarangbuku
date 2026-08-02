@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import BookCopyForm, CatalogSearchForm
+from .forms import BookCopyForm, CatalogSearchForm, ManualBookCopyForm
 from .models import Book, BookCopy, normalize_isbn
 
 
@@ -85,3 +85,16 @@ def copy_create(request, book_id):
         "books/copy_form.html",
         {"book": book, "form": form},
     )
+
+
+@login_required
+def manual_create(request):
+    if response := _active_zone_redirect(request):
+        return response
+
+    form = ManualBookCopyForm(request.POST or None, initial=request.GET or None)
+    if request.method == "POST" and form.is_valid():
+        form.save(owner=request.user)
+        messages.success(request, "Buku sudah ditambahkan ke Lemari.")
+        return redirect("books:shelf")
+    return render(request, "books/manual_form.html", {"form": form})

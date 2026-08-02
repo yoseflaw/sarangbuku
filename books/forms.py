@@ -1,6 +1,7 @@
 from django import forms
+from django.core.validators import URLValidator
 
-from .models import BookCopy
+from .models import Book, BookCopy, normalize_isbn, validate_isbn
 
 
 class BookCopyForm(forms.ModelForm):
@@ -32,3 +33,46 @@ class CatalogSearchForm(forms.Form):
         if not value:
             raise forms.ValidationError("Masukkan ISBN, judul, atau penulis.")
         return value
+
+
+class ManualBookCopyForm(forms.Form):
+    title = forms.CharField(label="Judul", max_length=255)
+    authors = forms.CharField(label="Penulis", max_length=500)
+    isbn = forms.CharField(label="ISBN", max_length=17, required=False)
+    language = forms.CharField(label="Bahasa", max_length=100)
+    cover_url = forms.URLField(
+        label="URL sampul",
+        max_length=500,
+        required=False,
+        validators=(URLValidator(schemes=("http", "https")),),
+    )
+    condition = forms.ChoiceField(
+        label="Kondisi", choices=BookCopy.Condition.choices
+    )
+    condition_note = forms.CharField(
+        label="Catatan kondisi",
+        max_length=140,
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text="Opsional, maksimal 140 karakter.",
+    )
+    is_available = forms.BooleanField(
+        label="Tersedia untuk ditukar", required=False, initial=True
+    )
+
+    def clean_isbn(self):
+        isbn = normalize_isbn(self.cleaned_data["isbn"])
+        if isbn:
+            validate_isbn(isbn)
+        return isbn or None
+
+    def save(self, *, owner):
+        from .services import create_book_copy
+
+        book_fields = ("title", "authors", "isbn", "language", "cover_url")
+        copy_fields = ("condition", "condition_note", "is_available")
+        return create_book_copy(
+            owner=owner,
+            book_data={name: self.cleaned_data[name] for name in book_fields},
+            copy_data={name: self.cleaned_data[name] for name in copy_fields},
+        )

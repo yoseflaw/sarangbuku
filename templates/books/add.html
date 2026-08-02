@@ -23,6 +23,11 @@
         <button type="submit" class="btn btn-primary">Cari</button>
       </form>
 
+      <div class="mb-4">
+        <p class="text-muted small mb-2">Tidak menemukan buku yang dicari?</p>
+        <a href="{% url 'books:manual_create' %}" class="btn btn-outline-secondary">Masukkan manual</a>
+      </div>
+
       {% if books %}
         <div class="row g-3">
           {% for book in books %}

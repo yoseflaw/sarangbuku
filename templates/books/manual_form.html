@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Tambah Buku Manual - Sarang Buku{% endblock %}
+
+{% block content %}
+  <div class="container my-4">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title mb-0">Tambah Buku Manual</h3>
+          </div>
+          <div class="card-body">
+            {% if form.errors %}
+              <div class="alert alert-danger">
+                <strong>Ada kesalahan dalam form:</strong>
+                <ul class="mb-0">
+                  {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                      <li>{{ field|capfirst }}: {{ error }}</li>
+                    {% endfor %}
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+
+            <form method="post">
+              {% csrf_token %}
+              
+              <div class="mb-3">
+                {{ form.title.label_tag }}
+                {{ form.title }}
+                {% if form.title.help_text %}
+                  <div class="form-text">{{ form.title.help_text }}</div>
+                {% endif %}
+              </div>
+
+              <div class="mb-3">
+                {{ form.authors.label_tag }}
+                {{ form.authors }}
+                {% if form.authors.help_text %}
+                  <div class="form-text">{{ form.authors.help_text }}</div>
+                {% endif %}
+              </div>
+
+              <div class="mb-3">
+                {{ form.isbn.label_tag }}
+                {{ form.isbn }}
+                {% if form.isbn.help_text %}
+                  <div class="form-text">{{ form.isbn.help_text }}</div>
+                {% endif %}
+              </div>
+
+              <div class="mb-3">
+                {{ form.language.label_tag }}
+                {{ form.language }}
+                {% if form.language.help_text %}
+                  <div class="form-text">{{ form.language.help_text }}</div>
+                {% endif %}
+              </div>
+
+              <div class="mb-3">
+                {{ form.cover_url.label_tag }}
+                {{ form.cover_url }}
+                {% if form.cover_url.help_text %}
+                  <div class="form-text">{{ form.cover_url.help_text }}</div>
+                {% endif %}
+              </div>
+
+              <div class="mb-3">
+                {{ form.condition.label_tag }}
+                {{ form.condition }}
+                {% if form.condition.help_text %}
+                  <div class="form-text">{{ form.condition.help_text }}</div>
+                {% endif %}
+              </div>
+
+              <div class="mb-3">
+                {{ form.condition_note.label_tag }}
+                {{ form.condition_note }}
+                {% if form.condition_note.help_text %}
+                  <div class="form-text">{{ form.condition_note.help_text }}</div>
+                {% endif %}
+              </div>
+
+              <div class="mb-3 form-check">
+                {{ form.is_available }}
+                {{ form.is_available.label_tag }}
+                {% if form.is_available.help_text %}
+                  <div class="form-text">{{ form.is_available.help_text }}</div>
+                {% endif %}
+              </div>
+
+              <div class="d-flex justify-content-between">
+                <a href="{% url 'books:add' %}" class="btn btn-secondary">Batal</a>
+                <button type="submit" class="btn btn-primary">Simpan ke Lemari</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

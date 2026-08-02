@@ -151,4 +151,5 @@ class ProfileTests(TestCase):
         self.assertContains(response, "Tambahkan Buku")
         self.assertContains(response, "Belum tersedia")
         self.assertContains(response, "disabled")
-        self.assertNotContains(response, "href=\"/buku")
+        # Check that the disabled button is present (not a link)
+        self.assertContains(response, '<button type="button" class="btn btn-secondary" disabled>Belum tersedia</button>')

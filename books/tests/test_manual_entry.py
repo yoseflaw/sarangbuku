@@ -86,6 +86,32 @@ class ManualEntryTests(TestCase):
                 self.assertContains(response, "Bidang ini tidak boleh kosong.")
                 self.assertEqual(Book.objects.count(), 0)
 
+    def test_invalid_fields_are_identified_by_indonesian_labels(self):
+        data = VALID_DATA.copy()
+        data.update(
+            isbn="9780306406158",
+            cover_url="ftp://example.com/cover.jpg",
+            condition_note="x" * 141,
+        )
+        response = self.client.post(reverse("books:manual_create"), data)
+
+        self.assertContains(response, '<div class="alert alert-danger" role="alert">')
+        self.assertContains(
+            response,
+            "<li>ISBN: Masukkan ISBN-10 atau ISBN-13 yang valid.</li>",
+            html=True,
+        )
+        self.assertContains(
+            response,
+            "<li>URL sampul: Masukkan URL yang valid.</li>",
+            html=True,
+        )
+        self.assertContains(
+            response,
+            "<li>Catatan kondisi: Pastikan nilai ini mengandung paling banyak 140 karakter (sekarang 141 karakter).</li>",
+            html=True,
+        )
+
     def test_safe_values_remain_after_validation_failure(self):
         data = VALID_DATA.copy()
         data["isbn"] = "invalid"
@@ -158,16 +184,19 @@ class ConcurrentIsbnCreationTests(TransactionTestCase):
 
     def worker(self, barrier):
         close_old_connections()
-        barrier.wait()
-        
-        # Fresh instances for each thread
-        user = User.objects.get(pk=self.user.pk)
-        data = VALID_DATA.copy()
-        data["title"] = f"Title {barrier.parties}"  # Different titles
-        
-        form = ManualBookCopyForm(data)
-        if form.is_valid():
-            form.save(owner=user)
+        try:
+            barrier.wait()
+
+            # Fresh instances for each thread
+            user = User.objects.get(pk=self.user.pk)
+            data = VALID_DATA.copy()
+            data["title"] = f"Title {barrier.parties}"  # Different titles
+
+            form = ManualBookCopyForm(data)
+            if form.is_valid():
+                form.save(owner=user)
+        finally:
+            close_old_connections()
 
     def test_concurrent_same_isbn_creates_one_book_two_copies(self):
         barrier = Barrier(2)

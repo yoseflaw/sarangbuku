@@ -69,12 +69,16 @@ class ShelfTests(TestCase):
         self.assertContains(response, "Sangat Bagus")
         self.assertContains(response, "Tidak tersedia")
 
-    def test_shelf_empty_state_shows_tambah(self):
-        # Remove the copy to test empty state
-        self.copy.delete()
+    def test_shelf_tambah_actions_link_to_add_page(self):
         self.client.force_login(self.owner)
+        add_href = f'href="{reverse("books:add")}"'
+
         response = self.client.get(reverse("books:shelf"))
-        self.assertContains(response, "Tambah")
+        self.assertContains(response, add_href, count=2)
+
+        self.copy.delete()
+        response = self.client.get(reverse("books:shelf"))
+        self.assertContains(response, add_href, count=3)
 
     def test_shelf_shows_book_details(self):
         self.client.force_login(self.owner)

@@ -144,12 +144,13 @@ class ProfileTests(TestCase):
         self.assertContains(response, self.user.email)
         self.assertNotContains(response, self.other_user.email)
 
-    def test_add_book_control_is_disabled_and_has_no_book_link(self):
+    def test_add_book_control_is_active_link_to_books_add(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse("accounts:profile"))
 
-        self.assertContains(response, "Tambahkan Buku")
-        self.assertContains(response, "Belum tersedia")
-        self.assertContains(response, "disabled")
-        # Check that the disabled button is present (not a link)
-        self.assertContains(response, '<button type="button" class="btn btn-secondary" disabled>Belum tersedia</button>')
+        self.assertContains(response, "Tambah Buku")
+        self.assertContains(response, reverse("books:add"))
+        self.assertNotContains(response, "Belum tersedia")
+        self.assertNotContains(response, "disabled")
+        # Check that the active link is present
+        self.assertContains(response, '<a href="/buku/tambah/" class="btn btn-primary">Tambah</a>')

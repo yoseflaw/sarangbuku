@@ -55,14 +55,13 @@
     </div>
   </form>
 
-  <section class="card" aria-labelledby="tambahkan-buku">
+  <section class="card" aria-labelledby="tambah-buku">
     <div class="card-body">
-      <h2 id="tambahkan-buku" class="h5">Tambahkan Buku</h2>
+      <h2 id="tambah-buku" class="h5">Tambah Buku</h2>
       <p>
-        Setelah memilih Sarang, nanti kamu bisa menambahkan buku yang sudah selesai kamu baca.
-        Fitur ini belum tersedia.
+        Setelah memilih Sarang, kamu bisa menambahkan buku yang sudah selesai kamu baca.
       </p>
-      <button type="button" class="btn btn-secondary" disabled>Belum tersedia</button>
+      <a href="{% url 'books:add' %}" class="btn btn-primary">Tambah</a>
     </div>
   </section>
 </div>

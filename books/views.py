@@ -1,9 +1,20 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import BookCopyForm
-from .models import BookCopy
+from .forms import BookCopyForm, CatalogSearchForm
+from .models import Book, BookCopy, normalize_isbn
+
+
+def _active_zone_redirect(request):
+    if request.user.swap_zones.filter(is_active=True).exists():
+        return None
+    messages.error(
+        request,
+        "Pilih setidaknya satu Sarang aktif di Profil sebelum menambahkan buku.",
+    )
+    return redirect("accounts:profile")
 
 
 @login_required
@@ -31,3 +42,46 @@ def copy_delete(request, pk):
         messages.success(request, "Buku sudah dihapus dari Lemari.")
         return redirect("books:shelf")
     return render(request, "books/copy_confirm_delete.html", {"copy": copy})
+
+
+@login_required
+def add(request):
+    if response := _active_zone_redirect(request):
+        return response
+
+    form = CatalogSearchForm(request.GET or None)
+    books = Book.objects.none()
+    if form.is_valid():
+        query = form.cleaned_data["q"]
+        normalized = normalize_isbn(query)
+        predicate = Q(title__icontains=query) | Q(authors__icontains=query)
+        if normalized:
+            predicate |= Q(isbn=normalized)
+        books = Book.objects.filter(predicate).order_by("title", "authors", "pk")[:25]
+
+    return render(
+        request,
+        "books/add.html",
+        {"form": form, "books": books},
+    )
+
+
+@login_required
+def copy_create(request, book_id):
+    if response := _active_zone_redirect(request):
+        return response
+
+    book = get_object_or_404(Book, pk=book_id)
+    form = BookCopyForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        copy = form.save(commit=False)
+        copy.owner = request.user
+        copy.book = book
+        copy.save()
+        messages.success(request, "Buku sudah ditambahkan ke Lemari.")
+        return redirect("books:shelf")
+    return render(
+        request,
+        "books/copy_form.html",
+        {"book": book, "form": form},
+    )

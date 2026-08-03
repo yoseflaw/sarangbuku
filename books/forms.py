@@ -17,7 +17,7 @@ class BookCopyForm(forms.ModelForm):
             "condition_note": "Opsional, maksimal 140 karakter.",
         }
         widgets = {
-            "condition_note": forms.Textarea(attrs={"rows": 3}),
+            "condition_note": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
         }
 
 
@@ -53,7 +53,7 @@ class ManualBookCopyForm(forms.Form):
         label="Catatan kondisi",
         max_length=140,
         required=False,
-        widget=forms.Textarea(attrs={"rows": 3}),
+        widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
         help_text="Opsional, maksimal 140 karakter.",
     )
     is_available = forms.BooleanField(

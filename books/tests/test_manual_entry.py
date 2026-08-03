@@ -112,6 +112,14 @@ class ManualEntryTests(TestCase):
             html=True,
         )
 
+    def test_condition_note_uses_responsive_control(self):
+        response = self.client.get(reverse("books:manual_create"))
+
+        self.assertIn(
+            "form-control",
+            response.context["form"].fields["condition_note"].widget.attrs.get("class", ""),
+        )
+
     def test_safe_values_remain_after_validation_failure(self):
         data = VALID_DATA.copy()
         data["isbn"] = "invalid"

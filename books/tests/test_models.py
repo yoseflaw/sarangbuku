@@ -4,7 +4,7 @@ from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.test import SimpleTestCase, TestCase
 
-from books.models import Book, BookCopy, normalize_isbn, validate_isbn
+from books.models import Book, BookCopy, WishlistItem, normalize_isbn, validate_isbn
 
 
 class IsbnTests(SimpleTestCase):
@@ -139,6 +139,51 @@ class BookModelTests(TestCase):
             copy.save()
 
 
+class WishlistItemModelTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            email="wishlist@example.com",
+            display_name="Pembaca",
+            password="safe-test-password",
+        )
+        cls.other_user = get_user_model().objects.create_user(
+            email="other-wishlist@example.com",
+            display_name="Pembaca Lain",
+            password="safe-test-password",
+        )
+        cls.book = Book.objects.create(
+            title="Matilda",
+            authors="Roald Dahl",
+            language="English",
+        )
+        cls.other_book = Book.objects.create(
+            title="Laskar Pelangi",
+            authors="Andrea Hirata",
+            language="Indonesia",
+        )
+
+    def test_user_and_book_pair_is_unique(self):
+        WishlistItem.objects.create(user=self.user, book=self.book)
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            WishlistItem.objects.create(user=self.user, book=self.book)
+
+    def test_users_and_editions_remain_independent(self):
+        WishlistItem.objects.create(user=self.user, book=self.book)
+        WishlistItem.objects.create(user=self.other_user, book=self.book)
+        WishlistItem.objects.create(user=self.user, book=self.other_book)
+
+        self.assertEqual(WishlistItem.objects.count(), 3)
+
+    def test_deleting_item_preserves_catalog_record(self):
+        item = WishlistItem.objects.create(user=self.user, book=self.book)
+
+        item.delete()
+
+        self.assertTrue(Book.objects.filter(pk=self.book.pk).exists())
+
+
 class AdminTests(SimpleTestCase):
     def test_book_admin_is_registered(self):
         from django.contrib import admin
@@ -159,3 +204,18 @@ class AdminTests(SimpleTestCase):
         self.assertEqual(BookCopyAdmin.list_filter, ("condition", "is_available"))
         self.assertEqual(BookCopyAdmin.search_fields, ("book__title", "book__authors", "book__isbn", "owner__email"))
         self.assertEqual(BookCopyAdmin.list_select_related, ("book", "owner"))
+
+    def test_wishlist_admin_is_registered(self):
+        from django.contrib import admin
+        from books.admin import WishlistItemAdmin
+        from books.models import WishlistItem
+
+        self.assertIsInstance(admin.site._registry[WishlistItem], WishlistItemAdmin)
+        self.assertEqual(
+            WishlistItemAdmin.list_display,
+            ("user", "book", "book_authors", "created_at"),
+        )
+        self.assertEqual(
+            WishlistItemAdmin.search_fields,
+            ("user__email", "book__title", "book__authors", "book__isbn"),
+        )

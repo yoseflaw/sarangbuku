@@ -106,3 +106,29 @@ class BookCopy(models.Model):
 
     def __str__(self):
         return f"{self.book} milik {self.owner}"
+
+
+class WishlistItem(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="wishlist_items",
+    )
+    book = models.ForeignKey(
+        Book,
+        on_delete=models.CASCADE,
+        related_name="wishlist_items",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at", "-pk")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "book"),
+                name="books_wishlistitem_user_book_unique",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.book} diminati {self.user}"

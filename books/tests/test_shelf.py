@@ -72,6 +72,19 @@ class ShelfTests(TestCase):
         self.assertContains(response, self.owners_book.title)
         self.assertNotContains(response, self.other_book.title)
 
+    def test_shelf_renders_reserved_copy_with_aa_compliant_text_color(self):
+        self.copy.availability_status = BookCopy.Availability.RESERVED
+        self.copy.save(update_fields=("availability_status",))
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("books:shelf"))
+
+        self.assertContains(
+            response,
+            '<span class="small text-dark">Ada Peminat</span>',
+            html=True,
+        )
+
     def test_shelf_shows_unavailable_copy_and_approved_condition_label(self):
         self.copy.availability_status = BookCopy.Availability.UNAVAILABLE
         self.copy.condition = BookCopy.Condition.VERY_GOOD

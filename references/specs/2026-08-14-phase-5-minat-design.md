@@ -71,7 +71,7 @@ Database constraints prevent a copy from being requested in exchange for itself 
 
 ### BookSwap
 
-A BookSwap is linked one-to-one with its accepted Minat. In Phase 5 it stores its `coordination` status and timestamps. The accepted Minat already preserves the participants, copies, and Sarang, so BookSwap does not duplicate those fields.
+A BookSwap is linked one-to-one with its accepted Minat. In Phase 5 it stores the selected Sarang, its `coordinating` status, and timestamps. Storing the Sarang directly preserves the accepted meeting agreement when either participant later changes profile zones. The accepted Minat already preserves the participants and copies, so BookSwap does not duplicate those fields.
 
 Phase 6 may add fields required for coordination, confirmations, cancellation, problems, and completion. Phase 5 does not scaffold them early.
 
@@ -134,7 +134,7 @@ Only the recipient may accept a pending Minat. The acceptance service locks the 
 A successful acceptance performs one database transaction that:
 
 1. Marks the Minat `accepted` and records its resolution time
-2. Creates its BookSwap in `coordination`
+2. Creates its BookSwap in `coordinating` with the selected Sarang
 3. Marks both copies `reserved`
 4. Marks every other pending Minat involving either copy `automatically_rejected`
 
@@ -176,7 +176,9 @@ Tukar list and detail pages show accepted exchanges, both display names, both bo
 
 ## Administration
 
-Django Admin registers Minat and BookSwap with useful list columns, filters, search, and read-only timestamps. Phase 5 administration is for inspection only; it adds no manual state-transition actions.
+Django Admin registers Minat and BookSwap with useful list columns, filters, search, and read-only timestamps. Phase 5 administration is for inspection only; it adds no manual Minat or Tukar state-transition actions.
+
+Administrative account deactivation uses a transactional service rather than writing `is_active` directly. It locks the account and related exchange records, refuses deactivation while the member participates in an accepted unfinished Tukar, otherwise sets `is_active=False`, automatically rejects every pending Minat involving that member, and schedules the required automatic-rejection emails after commit. Phase 5 adds no member-facing deactivation page.
 
 Historical Minat and accepted Tukar use protected relationships where deletion would destroy required exchange records.
 
@@ -195,6 +197,7 @@ Implementation follows test-driven development with the smallest test proving ea
 - Concurrent attempts involving the same copy
 - Unavailable-copy automatic rejection
 - Reserved-copy edit and availability protection
+- Administrative deactivation rejection and unfinished-Tukar guard
 - Email events, concealed identities, and failure isolation
 - Lini grouping, ordering, labels, actions, and empty states
 - Accepted identity reveal only through participant-authorized Tukar pages
@@ -216,4 +219,5 @@ Phase 5 is complete when:
 9. Required new, accepted, rejected, and automatically rejected emails are attempted after commit, and delivery failure cannot undo product state.
 10. Resolved Minat remain visible under `Riwayat`, and accepted Minat link to `Tukar`.
 11. Reserved copies cannot be edited, hidden, or removed through member flows.
-12. The complete feature remains private, accessible, mobile-usable, and safe under concurrent acceptance attempts.
+12. Administrative account deactivation rejects pending Minat and is refused while an accepted unfinished Tukar exists.
+13. The complete feature remains private, accessible, mobile-usable, and safe under concurrent acceptance attempts.

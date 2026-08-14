@@ -113,7 +113,16 @@ class AcceptanceTests(TestCase):
     def database_state(self):
         return {
             "minat": list(
-                Minat.objects.order_by("pk").values_list("pk", "status", "resolved_at")
+                Minat.objects.order_by("pk").values_list(
+                    "pk",
+                    "status",
+                    "resolved_at",
+                    "requester_id",
+                    "recipient_id",
+                    "requested_copy_id",
+                    "offered_copy_id",
+                    "swap_zone_id",
+                )
             ),
             "copies": list(
                 BookCopy.objects.order_by("pk").values_list(

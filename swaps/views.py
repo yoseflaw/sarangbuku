@@ -12,6 +12,7 @@ from .services import (
     DuplicatePendingMinat,
     MinatEligibilityError,
     MinatTransitionError,
+    accept_minat,
     create_minat,
     reject_minat,
     withdraw_minat,
@@ -105,4 +106,18 @@ def minat_reject(request, pk):
         messages.error(request, str(error))
     else:
         messages.success(request, "Minat sudah ditolak.")
+    return redirect("swaps:minat_detail", pk=pk)
+
+
+@login_required
+def minat_accept(request, pk):
+    get_object_or_404(Minat, pk=pk, recipient=request.user)
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    try:
+        accept_minat(minat_id=pk, recipient=request.user)
+    except MinatTransitionError as error:
+        messages.error(request, str(error))
+    else:
+        messages.success(request, "Minat diterima. Tukar ini siap dikoordinasikan.")
     return redirect("swaps:minat_detail", pk=pk)

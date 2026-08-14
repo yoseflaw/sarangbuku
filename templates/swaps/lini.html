@@ -14,7 +14,10 @@
         <p class="mb-1">{{ minat.requested_copy.get_condition_display }} dan {{ minat.offered_copy.get_condition_display }}</p>
         <p class="mb-1">Sarang: {{ minat.swap_zone.name }}</p>
         <p class="mb-3"><span class="badge bg-secondary">{{ minat.get_status_display }}</span> · {{ minat.created_at }}</p>
-        <form method="post" action="{% url 'swaps:minat_reject' minat.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-danger">Tolak</button></form>
+        <div class="d-flex gap-2">
+          <form method="post" action="{% url 'swaps:minat_accept' minat.pk %}">{% csrf_token %}<button type="submit" class="btn btn-primary">Terima</button></form>
+          <form method="post" action="{% url 'swaps:minat_reject' minat.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-danger">Tolak</button></form>
+        </div>
       </div></article>
     {% empty %}
       <p>Belum ada Minat yang menunggu jawabanmu.</p>

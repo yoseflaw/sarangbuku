@@ -1,11 +1,12 @@
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from accounts.models import SwapZone, User
 from books.models import BookCopy
 
-from .models import Minat
-from .notifications import notify_new_minat, notify_rejected_minat
+from .models import BookSwap, Minat
+from .notifications import notify_accepted_minat, notify_new_minat, notify_rejected_minat
 
 PENDING_DUPLICATE_CONSTRAINT = "swaps_minat_unique_pending_combination"
 
@@ -168,3 +169,87 @@ def reject_minat(*, minat_id: int, recipient: User) -> Minat:
     minat.save(update_fields=["status", "resolved_at", "updated_at"])
     transaction.on_commit(lambda: notify_rejected_minat(minat_id=minat.pk, automatic=False))
     return minat
+
+
+@transaction.atomic
+def accept_minat(*, minat_id: int, recipient: User) -> BookSwap:
+    seed = (
+        Minat.objects.filter(pk=minat_id, recipient=recipient)
+        .values(
+            "requester_id",
+            "recipient_id",
+            "requested_copy_id",
+            "offered_copy_id",
+            "swap_zone_id",
+        )
+        .first()
+    )
+    if seed is None:
+        raise MinatTransitionError
+
+    users = _lock_users(seed["requester_id"], seed["recipient_id"])
+    copies = _lock_copies(seed["requested_copy_id"], seed["offered_copy_id"])
+    copy_ids = sorted(copies)
+    conflict = Q(requested_copy_id__in=copy_ids) | Q(offered_copy_id__in=copy_ids)
+    locked_minat = {
+        item.pk: item
+        for item in Minat.objects.select_for_update()
+        .filter(Q(pk=minat_id) | (Q(status=Minat.Status.PENDING) & conflict))
+        .order_by("pk")
+    }
+
+    minat = locked_minat.get(minat_id)
+    requester = users.get(seed["requester_id"])
+    recipient = users.get(seed["recipient_id"])
+    requested = copies.get(seed["requested_copy_id"])
+    offered = copies.get(seed["offered_copy_id"])
+    if (
+        minat is None
+        or minat.status != Minat.Status.PENDING
+        or requester is None
+        or recipient is None
+        or not requester.is_active
+        or not recipient.is_active
+        or requested is None
+        or offered is None
+        or requested.owner_id != recipient.pk
+        or offered.owner_id != requester.pk
+        or requested.availability_status != BookCopy.Availability.AVAILABLE
+        or offered.availability_status != BookCopy.Availability.AVAILABLE
+        or not _zone_is_shared(
+            swap_zone_id=minat.swap_zone_id,
+            first_user_id=requester.pk,
+            second_user_id=recipient.pk,
+        )
+    ):
+        raise MinatTransitionError
+
+    resolved_at = timezone.now()
+    minat.status = Minat.Status.ACCEPTED
+    minat.resolved_at = resolved_at
+    minat.save(update_fields=["status", "resolved_at", "updated_at"])
+    swap = BookSwap.objects.create(
+        minat=minat,
+        swap_zone_id=minat.swap_zone_id,
+        status=BookSwap.Status.COORDINATING,
+    )
+    for copy in (requested, offered):
+        copy.availability_status = BookCopy.Availability.RESERVED
+        copy.save(update_fields=["availability_status", "updated_at"])
+
+    automatically_rejected_ids = []
+    for other in locked_minat.values():
+        if other.pk != minat.pk and other.status == Minat.Status.PENDING:
+            other.status = Minat.Status.AUTOMATICALLY_REJECTED
+            other.resolved_at = resolved_at
+            other.save(update_fields=["status", "resolved_at", "updated_at"])
+            automatically_rejected_ids.append(other.pk)
+
+    transaction.on_commit(lambda: notify_accepted_minat(minat_id=minat.pk))
+    for rejected_id in automatically_rejected_ids:
+        transaction.on_commit(
+            lambda rejected_id=rejected_id: notify_rejected_minat(
+                minat_id=rejected_id, automatic=True
+            )
+        )
+    return swap

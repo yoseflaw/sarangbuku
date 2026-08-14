@@ -10,4 +10,5 @@ urlpatterns = [
     path("minat/<int:pk>/", views.minat_detail, name="minat_detail"),
     path("minat/<int:pk>/batal/", views.minat_withdraw, name="minat_withdraw"),
     path("minat/<int:pk>/tolak/", views.minat_reject, name="minat_reject"),
+    path("minat/<int:pk>/terima/", views.minat_accept, name="minat_accept"),
 ]

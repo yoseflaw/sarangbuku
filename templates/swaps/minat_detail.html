@@ -20,7 +20,10 @@
     <dd>{{ minat.created_at }}</dd>
   </dl>
   {% if minat.status == "pending" and not is_requester %}
-    <form method="post" action="{% url 'swaps:minat_reject' minat.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-danger">Tolak</button></form>
+    <div class="d-flex gap-2">
+      <form method="post" action="{% url 'swaps:minat_accept' minat.pk %}">{% csrf_token %}<button type="submit" class="btn btn-primary">Terima</button></form>
+      <form method="post" action="{% url 'swaps:minat_reject' minat.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-danger">Tolak</button></form>
+    </div>
   {% elif minat.status == "pending" and is_requester %}
     <form method="post" action="{% url 'swaps:minat_withdraw' minat.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-danger">Batal</button></form>
   {% endif %}

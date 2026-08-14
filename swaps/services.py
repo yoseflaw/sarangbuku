@@ -1,10 +1,11 @@
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from accounts.models import SwapZone, User
 from books.models import BookCopy
 
 from .models import Minat
-from .notifications import notify_new_minat
+from .notifications import notify_new_minat, notify_rejected_minat
 
 PENDING_DUPLICATE_CONSTRAINT = "swaps_minat_unique_pending_combination"
 
@@ -139,4 +140,31 @@ def create_minat(
         raise
 
     transaction.on_commit(lambda: notify_new_minat(minat_id=minat.pk))
+    return minat
+
+
+@transaction.atomic
+def withdraw_minat(*, minat_id: int, requester: User) -> Minat:
+    minat = (
+        Minat.objects.select_for_update().filter(pk=minat_id, requester=requester).first()
+    )
+    if minat is None or minat.status != Minat.Status.PENDING:
+        raise MinatTransitionError
+    minat.status = Minat.Status.WITHDRAWN
+    minat.resolved_at = timezone.now()
+    minat.save(update_fields=["status", "resolved_at", "updated_at"])
+    return minat
+
+
+@transaction.atomic
+def reject_minat(*, minat_id: int, recipient: User) -> Minat:
+    minat = (
+        Minat.objects.select_for_update().filter(pk=minat_id, recipient=recipient).first()
+    )
+    if minat is None or minat.status != Minat.Status.PENDING:
+        raise MinatTransitionError
+    minat.status = Minat.Status.REJECTED
+    minat.resolved_at = timezone.now()
+    minat.save(update_fields=["status", "resolved_at", "updated_at"])
+    transaction.on_commit(lambda: notify_rejected_minat(minat_id=minat.pk, automatic=False))
     return minat

@@ -5,6 +5,9 @@
 {% block content %}
 <div class="py-4 mx-auto sb-form-page">
   <h1 class="h2">Minat</h1>
+  {% for message in messages %}
+    <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}" role="alert">{{ message }}</div>
+  {% endfor %}
   <p><span class="badge bg-secondary">{{ minat.get_status_display }}</span></p>
   <dl>
     <dt>Buku yang diminta</dt>
@@ -16,5 +19,10 @@
     <dt>Dikirim</dt>
     <dd>{{ minat.created_at }}</dd>
   </dl>
+  {% if minat.status == "pending" and not is_requester %}
+    <form method="post" action="{% url 'swaps:minat_reject' minat.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-danger">Tolak</button></form>
+  {% elif minat.status == "pending" and is_requester %}
+    <form method="post" action="{% url 'swaps:minat_withdraw' minat.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-danger">Batal</button></form>
+  {% endif %}
 </div>
 {% endblock %}

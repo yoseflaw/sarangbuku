@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Lini | Sarang Buku{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <h1 class="h2">Lini</h1>
+
+  <section class="mt-4" aria-labelledby="ditunggu">
+    <h2 id="ditunggu" class="h4">Ditunggu</h2>
+    {% for minat in received %}
+      <article class="card mb-3"><div class="card-body">
+        <h3 class="h5"><a href="{% url 'swaps:minat_detail' minat.pk %}">{{ minat.requested_copy.book.title }} dan {{ minat.offered_copy.book.title }}</a></h3>
+        <p class="mb-1">{{ minat.requested_copy.get_condition_display }} dan {{ minat.offered_copy.get_condition_display }}</p>
+        <p class="mb-1">Sarang: {{ minat.swap_zone.name }}</p>
+        <p class="mb-3"><span class="badge bg-secondary">{{ minat.get_status_display }}</span> · {{ minat.created_at }}</p>
+        <form method="post" action="{% url 'swaps:minat_reject' minat.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-danger">Tolak</button></form>
+      </div></article>
+    {% empty %}
+      <p>Belum ada Minat yang menunggu jawabanmu.</p>
+    {% endfor %}
+  </section>
+
+  <section class="mt-4" aria-labelledby="menunggu">
+    <h2 id="menunggu" class="h4">Menunggu</h2>
+    {% for minat in sent %}
+      <article class="card mb-3"><div class="card-body">
+        <h3 class="h5"><a href="{% url 'swaps:minat_detail' minat.pk %}">{{ minat.requested_copy.book.title }} dan {{ minat.offered_copy.book.title }}</a></h3>
+        <p class="mb-1">{{ minat.requested_copy.get_condition_display }} dan {{ minat.offered_copy.get_condition_display }}</p>
+        <p class="mb-1">Sarang: {{ minat.swap_zone.name }}</p>
+        <p class="mb-3"><span class="badge bg-secondary">{{ minat.get_status_display }}</span> · {{ minat.created_at }}</p>
+        <form method="post" action="{% url 'swaps:minat_withdraw' minat.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-danger">Batal</button></form>
+      </div></article>
+    {% empty %}
+      <p>Belum ada Minat yang kamu kirim. <a href="{% url 'books:discover' %}">Temukan</a> buku yang ingin kamu tukar.</p>
+    {% endfor %}
+  </section>
+
+  <section class="mt-4" aria-labelledby="riwayat">
+    <h2 id="riwayat" class="h4">Riwayat</h2>
+    {% for minat in history %}
+      <article class="card mb-3"><div class="card-body">
+        <h3 class="h5"><a href="{% url 'swaps:minat_detail' minat.pk %}">{{ minat.requested_copy.book.title }} dan {{ minat.offered_copy.book.title }}</a></h3>
+        <p class="mb-1">{{ minat.requested_copy.get_condition_display }} dan {{ minat.offered_copy.get_condition_display }}</p>
+        <p class="mb-1">Sarang: {{ minat.swap_zone.name }}</p>
+        <p class="mb-0"><span class="badge bg-secondary">{{ minat.get_status_display }}</span> · {{ minat.created_at }}</p>
+      </div></article>
+    {% empty %}
+      <p>Belum ada riwayat Minat.</p>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

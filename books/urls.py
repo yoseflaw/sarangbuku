@@ -7,6 +7,7 @@ app_name = "books"
 urlpatterns = [
     path("", views.shelf, name="shelf"),
     path("tambah/", views.add, name="add"),
+    path("temukan/", views.discover, name="discover"),
     path("tambah/open-library/", views.open_library_search, name="open_library"),
     path("tambah/manual/", views.manual_create, name="manual_create"),
     path("daftar-minat/", views.wishlist, name="wishlist"),

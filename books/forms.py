@@ -1,6 +1,8 @@
 from django import forms
 from django.core.validators import URLValidator
 
+from accounts.models import SwapZone
+
 from .models import Book, BookCopy, normalize_isbn, validate_isbn
 
 
@@ -19,6 +21,45 @@ class BookCopyForm(forms.ModelForm):
         widgets = {
             "condition_note": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
         }
+
+
+class DiscoveryFilterForm(forms.Form):
+    q = forms.CharField(
+        label="Cari",
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    sarang = forms.ModelChoiceField(
+        label="Sarang",
+        queryset=SwapZone.objects.none(),
+        required=False,
+        empty_label="Semua Sarang",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    condition = forms.ChoiceField(
+        label="Kondisi",
+        choices=(),
+        required=False,
+        error_messages={"invalid_choice": "Pilih pilihan yang valid."},
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    wishlist = forms.BooleanField(
+        label="Daftar Minat saja",
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+
+    def __init__(self, *args, viewer, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["sarang"].queryset = viewer.swap_zones.filter(is_active=True)
+        self.fields["condition"].choices = [
+            ("", "Semua kondisi"),
+            *BookCopy.Condition.choices,
+        ]
+
+    def clean_q(self):
+        return self.cleaned_data["q"].strip()
 
 
 class CatalogSearchForm(forms.Form):

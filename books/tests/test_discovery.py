@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
 
 from accounts.models import SwapZone
+from books.forms import DiscoveryFilterForm
 from books.models import Book, BookCopy, WishlistItem
 from books.services import discoverable_copies
 
@@ -141,3 +143,120 @@ class DiscoverableCopiesTests(DiscoverySetupMixin, TestCase):
         result = discoverable_copies(viewer=self.viewer).get(pk=copy.pk)
 
         self.assertTrue(result.is_wishlisted)
+
+
+class DiscoveryFilterFormTests(DiscoverySetupMixin, TestCase):
+    def test_sarang_choices_are_only_viewers_active_sarang(self):
+        form = DiscoveryFilterForm(viewer=self.viewer)
+
+        self.assertCountEqual(
+            form.fields["sarang"].queryset,
+            [self.shared, self.second_shared],
+        )
+        self.assertNotIn(self.inactive_zone, form.fields["sarang"].queryset)
+
+    def test_rejects_sarang_outside_viewers_active_choices(self):
+        form = DiscoveryFilterForm(
+            {"sarang": self.unshared.pk},
+            viewer=self.viewer,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("sarang", form.errors)
+
+
+class DiscoveryListTests(DiscoverySetupMixin, TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.copy = BookCopy.objects.create(
+            owner=cls.owner,
+            book=cls.book,
+            condition=BookCopy.Condition.GOOD,
+            condition_note="Sampul sedikit terlipat.",
+            is_available=True,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.viewer)
+
+    def test_unfiltered_page_shows_permitted_data_without_owner_identity(self):
+        response = self.client.get(reverse("books:discover"))
+
+        self.assertContains(response, "Matilda")
+        self.assertContains(response, "Roald Dahl")
+        self.assertContains(response, "Masih Bagus")
+        self.assertContains(response, "Sampul sedikit terlipat.")
+        self.assertContains(response, "Blok M")
+        self.assertNotContains(response, self.owner.display_name)
+        self.assertNotContains(response, self.owner.email)
+        self.assertNotContains(response, "Ajukan Minat")
+
+    def test_search_matches_title_author_and_normalized_isbn(self):
+        for query in ("matilda", "roald dahl", "978-0-14-032872-1"):
+            with self.subTest(query=query):
+                response = self.client.get(reverse("books:discover"), {"q": query})
+                self.assertContains(response, "Matilda")
+
+    def test_sarang_condition_and_wishlist_filters_compose(self):
+        WishlistItem.objects.create(user=self.viewer, book=self.book)
+
+        response = self.client.get(
+            reverse("books:discover"),
+            {
+                "sarang": self.shared.pk,
+                "condition": BookCopy.Condition.GOOD,
+                "wishlist": "on",
+            },
+        )
+
+        self.assertContains(response, "Matilda")
+        self.assertContains(response, "Ada di Daftar Minat")
+
+    def test_invalid_filter_returns_no_results_instead_of_broadening(self):
+        response = self.client.get(
+            reverse("books:discover"),
+            {"condition": "not-a-condition"},
+        )
+
+        self.assertContains(response, "Pilih pilihan yang valid")
+        self.assertNotContains(response, "Matilda")
+
+    def test_pagination_is_24_and_preserves_filters(self):
+        for index in range(24):
+            book = Book.objects.create(
+                title=f"Matilda {index:02d}",
+                authors="Roald Dahl",
+                language="English",
+            )
+            BookCopy.objects.create(
+                owner=self.owner,
+                book=book,
+                condition=BookCopy.Condition.GOOD,
+                is_available=True,
+            )
+
+        response = self.client.get(
+            reverse("books:discover"),
+            {"q": "Matilda", "page": 2},
+        )
+
+        self.assertEqual(response.context["page_obj"].number, 2)
+        self.assertContains(response, "q=Matilda")
+
+    def test_guards_and_navigation_labels(self):
+        response = self.client.get(reverse("books:discover"))
+        self.assertContains(response, ">Temukan<", html=False)
+        self.assertContains(response, ">Daftar Minat<", html=False)
+
+        self.viewer.swap_zones.clear()
+        self.assertRedirects(
+            self.client.get(reverse("books:discover")),
+            reverse("accounts:profile"),
+        )
+
+        self.client.logout()
+        self.assertRedirects(
+            self.client.get(reverse("books:discover")),
+            f'{reverse("accounts:login")}?next={reverse("books:discover")}',
+        )

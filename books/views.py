@@ -2,15 +2,17 @@ from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from .forms import BookCopyForm, CatalogSearchForm, ManualBookCopyForm
+from .forms import BookCopyForm, CatalogSearchForm, DiscoveryFilterForm, ManualBookCopyForm
 from .models import Book, BookCopy, WishlistItem, normalize_isbn
 from .open_library import OpenLibraryError, search_open_library
+from .services import discoverable_copies
 
 
 def _active_zone_redirect(request):
@@ -40,6 +42,47 @@ def _post_redirect(request, fallback):
     ):
         return redirect(destination)
     return redirect(fallback)
+
+
+@login_required
+def discover(request):
+    if response := _active_zone_redirect(request):
+        return response
+
+    form = DiscoveryFilterForm(request.GET or None, viewer=request.user)
+    copies = BookCopy.objects.none()
+    if not form.is_bound or form.is_valid():
+        copies = discoverable_copies(viewer=request.user)
+        if form.is_bound:
+            query = form.cleaned_data["q"]
+            if query:
+                normalized = normalize_isbn(query)
+                predicate = Q(book__title__icontains=query) | Q(
+                    book__authors__icontains=query
+                )
+                if normalized:
+                    predicate |= Q(book__isbn=normalized)
+                copies = copies.filter(predicate)
+            if sarang := form.cleaned_data["sarang"]:
+                copies = copies.filter(owner__swap_zones=sarang)
+            if condition := form.cleaned_data["condition"]:
+                copies = copies.filter(condition=condition)
+            if form.cleaned_data["wishlist"]:
+                copies = copies.filter(is_wishlisted=True)
+
+    copies = copies.order_by("book__title", "book__authors", "pk").distinct()
+    page_obj = Paginator(copies, 24).get_page(request.GET.get("page"))
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
+    return render(
+        request,
+        "books/discover.html",
+        {
+            "form": form,
+            "page_obj": page_obj,
+            "filter_query": query_params.urlencode(),
+        },
+    )
 
 
 @login_required

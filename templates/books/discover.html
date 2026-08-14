@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Temukan | Sarang Buku{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <h1>Temukan</h1>
+
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }}" role="status">{{ message }}</div>
+  {% endfor %}
+
+  <form method="get" action="{% url 'books:discover' %}" class="row g-3 align-items-end mb-4">
+    <div class="col-12 col-md-6">
+      <label for="{{ form.q.id_for_label }}" class="form-label">{{ form.q.label }}</label>
+      {{ form.q }}
+      {% if form.q.errors %}
+        <div class="invalid-feedback d-block" role="alert">{% for error in form.q.errors %}{{ error }}{% endfor %}</div>
+      {% endif %}
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+      <label for="{{ form.sarang.id_for_label }}" class="form-label">{{ form.sarang.label }}</label>
+      {{ form.sarang }}
+      {% if form.sarang.errors %}
+        <div class="invalid-feedback d-block" role="alert">{% for error in form.sarang.errors %}{{ error }}{% endfor %}</div>
+      {% endif %}
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+      <label for="{{ form.condition.id_for_label }}" class="form-label">{{ form.condition.label }}</label>
+      {{ form.condition }}
+      {% if form.condition.errors %}
+        <div class="invalid-feedback d-block" role="alert">{% for error in form.condition.errors %}{{ error }}{% endfor %}</div>
+      {% endif %}
+    </div>
+    <div class="col-12 col-sm-auto">
+      <div class="form-check">
+        {{ form.wishlist }}
+        <label for="{{ form.wishlist.id_for_label }}" class="form-check-label">{{ form.wishlist.label }}</label>
+      </div>
+      {% if form.wishlist.errors %}
+        <div class="invalid-feedback d-block" role="alert">{% for error in form.wishlist.errors %}{{ error }}{% endfor %}</div>
+      {% endif %}
+    </div>
+    <div class="col-12 col-sm-auto">
+      <button type="submit" class="btn btn-primary">Terapkan</button>
+    </div>
+  </form>
+
+  {% if page_obj %}
+    <div class="row g-3">
+      {% for copy in page_obj %}
+        <div class="col-12 col-md-6 col-lg-4">
+          <article class="card h-100">
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-auto">
+                  {% if copy.book.cover_url %}
+                    <img src="{{ copy.book.cover_url }}" alt="Sampul {{ copy.book.title }}" class="rounded" style="width: 60px; height: 90px; object-fit: cover;">
+                  {% else %}
+                    <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 90px;">
+                      <small class="text-muted">Tanpa sampul</small>
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="col">
+                  <h2 class="h5 card-title mb-1">{{ copy.book.title }}</h2>
+                  <p class="text-muted small mb-1">{{ copy.book.authors }}</p>
+                  {% if copy.book.isbn %}<p class="text-muted small mb-1">ISBN: {{ copy.book.isbn }}</p>{% endif %}
+                  <p class="text-muted small mb-2">{{ copy.book.language }}</p>
+                  <p class="mb-1"><span class="badge bg-secondary">{{ copy.get_condition_display }}</span></p>
+                  {% if copy.condition_note %}<p class="small text-muted mb-2">{{ copy.condition_note }}</p>{% endif %}
+                  <p class="small mb-2">Sarang: {% for sarang in copy.owner.shared_active_zones %}{{ sarang.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+                  {% if copy.is_wishlisted %}
+                    <p class="small text-success mb-2">Ada di Daftar Minat</p>
+                    <form method="post" action="{% url 'books:wishlist_remove' copy.book.pk %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <button type="submit" class="btn btn-sm btn-outline-danger">Hapus dari Daftar Minat</button>
+                    </form>
+                  {% else %}
+                    <form method="post" action="{% url 'books:wishlist_add' copy.book.pk %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <button type="submit" class="btn btn-sm btn-outline-primary">Simpan ke Daftar Minat</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      {% endfor %}
+    </div>
+  {% elif form.is_bound and form.is_valid %}
+    <p class="text-muted">Tidak ada yang cocok.</p>
+  {% endif %}
+
+  {% if page_obj.has_other_pages %}
+    <nav class="mt-4" aria-label="Halaman hasil">
+      <ul class="pagination">
+        {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filter_query %}&amp;{{ filter_query }}{% endif %}">Sebelumnya</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filter_query %}&amp;{{ filter_query }}{% endif %}">Berikutnya</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% endif %}
+</div>
+{% endblock %}

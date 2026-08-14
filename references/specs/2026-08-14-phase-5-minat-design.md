@@ -15,6 +15,7 @@ Phase 5 covers the Minat decision lifecycle. Coordination messages, cancellation
 - Resolved Minat remain visible to both participants.
 - An accepted Minat remains in `Lini` under `Riwayat` and links to its separate `Tukar` record.
 - Exact duplicate pending Minat are forbidden when requester, requested copy, offered copy, and Sarang all match. Other combinations remain allowed, and the same combination may be submitted again after resolution.
+- The internal copy status `reserved` is shown to members as `Ada Peminat`.
 - No pagination or HTMX is needed for the invitation-only pilot.
 
 ## Non-goals

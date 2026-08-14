@@ -35,7 +35,7 @@
 # books.models.BookCopy
 class Availability(models.TextChoices):
     AVAILABLE = "available", "Tersedia"
-    RESERVED = "reserved", "Dipesan untuk Tukar"
+    RESERVED = "reserved", "Ada Peminat"
     UNAVAILABLE = "unavailable", "Tidak tersedia"
 
 availability_status = models.CharField(
@@ -222,7 +222,7 @@ Creation and acceptance errors use only the exception messages above. They do no
 - `books/urls.py`: unchanged; existing shelf and discovery routes remain stable.
 - `templates/books/copy_form.html`: render the two-choice availability field with associated errors.
 - `templates/books/manual_form.html`: render the renamed availability field.
-- `templates/books/shelf.html`: show `Tersedia`, `Dipesan untuk Tukar`, or `Tidak tersedia`, and suppress reserved edit/delete controls.
+- `templates/books/shelf.html`: show `Tersedia`, `Ada Peminat`, or `Tidak tersedia`, and suppress reserved edit/delete controls.
 - `templates/books/copy_confirm_delete.html`: preserve existing confirmation for deletable copies.
 - `templates/books/discovery_detail.html`: add the eligible `Ajukan Minat` link without exposing owner identity.
 - `books/tests/test_migrations.py`: prove forward and reverse availability mapping.
@@ -351,7 +351,7 @@ class BookCopyAvailabilityTests(TestCase):
             list(BookCopy.Availability.choices),
             [
                 ("available", "Tersedia"),
-                ("reserved", "Dipesan untuk Tukar"),
+                ("reserved", "Ada Peminat"),
                 ("unavailable", "Tidak tersedia"),
             ],
         )
@@ -442,7 +442,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 choices=[
                     ("available", "Tersedia"),
-                    ("reserved", "Dipesan untuk Tukar"),
+                    ("reserved", "Ada Peminat"),
                     ("unavailable", "Tidak tersedia"),
                 ],
                 max_length=11,
@@ -457,7 +457,7 @@ class Migration(migrations.Migration):
             field=models.CharField(
                 choices=[
                     ("available", "Tersedia"),
-                    ("reserved", "Dipesan untuk Tukar"),
+                    ("reserved", "Ada Peminat"),
                     ("unavailable", "Tidak tersedia"),
                 ],
                 default="available",
@@ -1808,7 +1808,7 @@ def delete_book_copy(*, copy_id: int, owner: User) -> None:
 
 Keep `BookCopyForm` responsible for field validation. In `copy_edit`, redirect an owner away from the GET form when reserved; on valid POST call `update_book_copy()` with cleaned scalar values and catch `ReservedCopyError`. In `copy_delete`, do the same GET guard and call `delete_book_copy()` on POST, catching `ReservedCopyError` and `HistoricalCopyError`. Error messages redirect to `books:shelf`; no raw `ProtectedError` reaches the member.
 
-In `shelf.html`, show `Dipesan untuk Tukar` as text and do not render `Ubah` or `Hapus` links when `availability_status == "reserved"`. This UI guard supplements, but never replaces, service enforcement.
+In `shelf.html`, show `Ada Peminat` as text and do not render `Ubah` or `Hapus` links when `availability_status == "reserved"`. This UI guard supplements, but never replaces, service enforcement.
 
 - [ ] **Step 5: Implement transactional account deactivation**
 
@@ -2173,7 +2173,7 @@ At both 390×844 and 1280×900, verify with real GET/POST interactions:
 7. Rejected, withdrawn, and automatically rejected rows remain under `Riwayat` with exact labels and no identity reveal.
 8. Acceptance creates one Tukar, reserves both copies, automatically rejects all conflicts, and reveals both display names only on participant-authorized Tukar pages.
 9. The outsider receives 404 for Minat and Tukar detail URLs and sees no rows in Lini/Tukar lists.
-10. A reserved copy shows `Dipesan untuk Tukar`, has no edit/delete controls, and direct edit/delete GET/POST attempts cannot mutate it.
+10. A reserved copy shows `Ada Peminat`, has no edit/delete controls, and direct edit/delete GET/POST attempts cannot mutate it.
 11. Tukar pages show both books, conditions, accepted Sarang, and no coordination/message/cancel/handover/problem/future controls.
 12. Use repeated `press Tab` and `press Shift+Tab` to reach every interactive control in logical order. Confirm visible focus with:
 

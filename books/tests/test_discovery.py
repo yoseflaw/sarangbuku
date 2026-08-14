@@ -166,6 +166,11 @@ class DiscoveryFilterFormTests(DiscoverySetupMixin, TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("sarang", form.errors)
 
+    def test_condition_label_describes_minimum_threshold(self):
+        form = DiscoveryFilterForm(viewer=self.viewer)
+
+        self.assertEqual(form.fields["condition"].label, "Kondisi minimum")
+
 
 class DiscoveryListTests(DiscoverySetupMixin, TestCase):
     @classmethod
@@ -199,6 +204,35 @@ class DiscoveryListTests(DiscoverySetupMixin, TestCase):
             with self.subTest(query=query):
                 response = self.client.get(reverse("books:discover"), {"q": query})
                 self.assertContains(response, "Matilda")
+
+    def test_condition_filter_includes_selected_and_better_but_excludes_worse(self):
+        for title, condition in (
+            ("Buku Seperti Baru", BookCopy.Condition.LIKE_NEW),
+            ("Buku Sangat Bagus", BookCopy.Condition.VERY_GOOD),
+            ("Buku Cukup Bagus", BookCopy.Condition.FAIR),
+            ("Buku Sudah Buruk", BookCopy.Condition.BAD),
+        ):
+            book = Book.objects.create(
+                title=title,
+                authors="Penulis Kondisi",
+                language="Indonesia",
+            )
+            BookCopy.objects.create(
+                owner=self.owner,
+                book=book,
+                condition=condition,
+                is_available=True,
+            )
+
+        response = self.client.get(
+            reverse("books:discover"),
+            {"condition": BookCopy.Condition.GOOD},
+        )
+
+        for title in ("Matilda", "Buku Seperti Baru", "Buku Sangat Bagus"):
+            self.assertContains(response, title)
+        for title in ("Buku Cukup Bagus", "Buku Sudah Buruk"):
+            self.assertNotContains(response, title)
 
     def test_sarang_condition_and_wishlist_filters_compose(self):
         WishlistItem.objects.create(user=self.viewer, book=self.book)

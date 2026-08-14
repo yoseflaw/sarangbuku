@@ -68,7 +68,10 @@ def discover(request):
             if sarang := form.cleaned_data["sarang"]:
                 copies = copies.filter(owner__swap_zones=sarang)
             if condition := form.cleaned_data["condition"]:
-                copies = copies.filter(condition=condition)
+                conditions = [value for value, _ in BookCopy.Condition.choices]
+                copies = copies.filter(
+                    condition__in=conditions[: conditions.index(condition) + 1]
+                )
             if form.cleaned_data["wishlist"]:
                 copies = copies.filter(is_wishlisted=True)
 

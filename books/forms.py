@@ -45,7 +45,7 @@ class DiscoveryFilterForm(forms.Form):
         widget=forms.Select(attrs={"class": "form-select"}),
     )
     condition = forms.ChoiceField(
-        label="Kondisi",
+        label="Kondisi minimum",
         choices=(),
         required=False,
         error_messages={"invalid_choice": "Pilih pilihan yang valid."},

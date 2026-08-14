@@ -25,8 +25,9 @@ a:hover {
 }
 
 :focus-visible {
-  outline: 2px solid #000;
+  outline: 2px solid #000 !important;
   outline-offset: 2px;
+  box-shadow: none !important;
 }
 
 .sb-wordmark {

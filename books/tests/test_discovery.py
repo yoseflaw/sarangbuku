@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -415,4 +417,18 @@ class DiscoveryDetailTests(DiscoverySetupMixin, TestCase):
         self.assertContains(
             response,
             reverse("books:wishlist_remove", args=[self.book.pk]),
+        )
+
+
+class DiscoveryAccessibilityTests(TestCase):
+    def test_global_focus_visible_overrides_component_focus_styles(self):
+        css = (Path(__file__).resolve().parents[2] / "static/css/sarangbuku.css").read_text()
+
+        self.assertIn(
+            ":focus-visible {\n"
+            "  outline: 2px solid #000 !important;\n"
+            "  outline-offset: 2px;\n"
+            "  box-shadow: none !important;\n"
+            "}",
+            css,
         )

@@ -213,6 +213,52 @@ class DiscoveryListTests(DiscoverySetupMixin, TestCase):
         self.assertContains(response, "Matilda")
         self.assertContains(response, "Ada di Daftar Minat")
 
+    def test_book_filter_matches_exact_catalog_record(self):
+        other_edition = Book.objects.create(
+            title="Matilda",
+            authors="Roald Dahl",
+            isbn="9780142410370",
+            language="English",
+        )
+        BookCopy.objects.create(
+            owner=self.owner,
+            book=other_edition,
+            condition=BookCopy.Condition.GOOD,
+            is_available=True,
+        )
+
+        response = self.client.get(
+            reverse("books:discover"),
+            {"book": self.book.pk},
+        )
+
+        self.assertContains(response, self.book.isbn)
+        self.assertNotContains(response, other_edition.isbn)
+
+    def test_invalid_book_filter_returns_no_results_instead_of_broadening(self):
+        response = self.client.get(reverse("books:discover"), {"book": "999999"})
+
+        self.assertContains(response, "Pilih pilihan yang valid")
+        self.assertNotContains(response, "Matilda")
+
+    def test_invalid_filter_error_is_associated_with_control(self):
+        response = self.client.get(
+            reverse("books:discover"),
+            {"condition": "not-a-condition"},
+        )
+
+        self.assertContains(
+            response,
+            'aria-describedby="id_condition_error"',
+            html=False,
+        )
+        self.assertContains(response, 'aria-invalid="true"', html=False)
+        self.assertContains(
+            response,
+            '<div id="id_condition_error" class="invalid-feedback d-block" role="alert">',
+            html=False,
+        )
+
     def test_invalid_filter_returns_no_results_instead_of_broadening(self):
         response = self.client.get(
             reverse("books:discover"),
@@ -276,6 +322,31 @@ class DiscoveryDetailTests(DiscoverySetupMixin, TestCase):
 
     def setUp(self):
         self.client.force_login(self.viewer)
+
+    def test_anonymous_user_redirects_to_login(self):
+        self.client.logout()
+        detail_url = reverse("books:discovery_detail", args=[self.copy.pk])
+
+        response = self.client.get(detail_url)
+
+        self.assertRedirects(
+            response,
+            f"{reverse('accounts:login')}?next={detail_url}",
+        )
+
+    def test_user_without_active_sarang_redirects_to_profile_with_message(self):
+        self.viewer.swap_zones.clear()
+
+        response = self.client.get(
+            reverse("books:discovery_detail", args=[self.copy.pk]),
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse("accounts:profile"))
+        self.assertContains(
+            response,
+            "Pilih setidaknya satu Sarang aktif di Profil untuk melanjutkan.",
+        )
 
     def test_eligible_detail_shows_only_permitted_information(self):
         response = self.client.get(

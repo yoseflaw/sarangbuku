@@ -30,6 +30,13 @@ class DiscoveryFilterForm(forms.Form):
         required=False,
         widget=forms.TextInput(attrs={"class": "form-control"}),
     )
+    book = forms.ModelChoiceField(
+        label="Buku",
+        queryset=Book.objects.all(),
+        required=False,
+        error_messages={"invalid_choice": "Pilih pilihan yang valid."},
+        widget=forms.HiddenInput(),
+    )
     sarang = forms.ModelChoiceField(
         label="Sarang",
         queryset=SwapZone.objects.none(),

@@ -54,6 +54,8 @@ def discover(request):
     if not form.is_bound or form.is_valid():
         copies = discoverable_copies(viewer=request.user)
         if form.is_bound:
+            if book := form.cleaned_data["book"]:
+                copies = copies.filter(book=book)
             query = form.cleaned_data["q"]
             if query:
                 normalized = normalize_isbn(query)

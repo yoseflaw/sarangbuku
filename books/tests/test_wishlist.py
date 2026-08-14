@@ -52,6 +52,27 @@ class WishlistViewTests(TestCase):
         self.assertNotContains(response, self.other_user.display_name)
         self.assertNotContains(response, self.other_user.email)
 
+    def test_saved_item_links_to_exact_book_discovery_filter(self):
+        WishlistItem.objects.create(user=self.user, book=self.book)
+
+        response = self.client.get(reverse("books:wishlist"))
+
+        self.assertContains(
+            response,
+            f"{reverse('books:discover')}?book={self.book.pk}",
+        )
+
+    def test_invalid_search_error_is_associated_with_control(self):
+        response = self.client.get(reverse("books:wishlist"), {"q": ""})
+
+        self.assertContains(response, 'aria-describedby="id_q_error"', html=False)
+        self.assertContains(response, 'aria-invalid="true"', html=False)
+        self.assertContains(
+            response,
+            '<div id="id_q_error" class="invalid-feedback d-block" role="alert">',
+            html=False,
+        )
+
     def test_local_search_matches_title_author_and_normalized_isbn(self):
         for query in ("matilda", "roald dahl", "978-0-14-032872-1"):
             with self.subTest(query=query):

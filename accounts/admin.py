@@ -4,6 +4,8 @@ from django.contrib.auth.admin import UserAdmin
 from django.core.mail import send_mail
 from django.db import transaction
 
+from swaps.services import UnfinishedSwapError, deactivate_account
+
 from .forms import (
     AdminUserChangeForm,
     AdminUserCreationForm,
@@ -54,6 +56,44 @@ class AccountUserAdmin(UserAdmin):
         ),
     )
     filter_horizontal = ("groups", "user_permissions", "swap_zones")
+    actions = ("deactivate_accounts", "activate_accounts")
+
+    @admin.action(description="Nonaktifkan akun terpilih")
+    def deactivate_accounts(self, request, queryset):
+        deactivated = 0
+        refused = 0
+        for user_id in queryset.order_by("pk").values_list("pk", flat=True):
+            try:
+                deactivate_account(user_id=user_id)
+            except UnfinishedSwapError:
+                refused += 1
+            else:
+                deactivated += 1
+        if deactivated:
+            self.message_user(
+                request,
+                f"{deactivated} akun dinonaktifkan.",
+                messages.SUCCESS,
+            )
+        if refused:
+            self.message_user(
+                request,
+                f"{refused} akun masih memiliki Tukar yang belum selesai.",
+                messages.ERROR,
+            )
+
+    @admin.action(description="Aktifkan akun terpilih")
+    def activate_accounts(self, request, queryset):
+        activated = queryset.filter(is_active=False).update(is_active=True)
+        if activated:
+            self.message_user(
+                request,
+                f"{activated} akun diaktifkan.",
+                messages.SUCCESS,
+            )
+
+
+AccountUserAdmin.readonly_fields = AccountUserAdmin.readonly_fields + ("is_active",)
 
 
 @admin.register(SwapZone)

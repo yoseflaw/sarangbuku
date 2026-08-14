@@ -84,6 +84,14 @@ class ShelfTests(TestCase):
             '<span class="small text-dark">Ada Peminat</span>',
             html=True,
         )
+        self.assertNotContains(
+            response,
+            reverse("books:copy_edit", args=[self.copy.pk]),
+        )
+        self.assertNotContains(
+            response,
+            reverse("books:copy_delete", args=[self.copy.pk]),
+        )
 
     def test_shelf_shows_unavailable_copy_and_approved_condition_label(self):
         self.copy.availability_status = BookCopy.Availability.UNAVAILABLE

@@ -74,6 +74,26 @@ def _constraint_name(error: IntegrityError) -> str | None:
     return getattr(diag, "constraint_name", None)
 
 
+def _automatically_reject_locked(minat_rows, *, resolved_at):
+    rejected_ids = []
+    for minat in minat_rows:
+        if minat.status == Minat.Status.PENDING:
+            minat.status = Minat.Status.AUTOMATICALLY_REJECTED
+            minat.resolved_at = resolved_at
+            minat.save(update_fields=["status", "resolved_at", "updated_at"])
+            rejected_ids.append(minat.pk)
+    return rejected_ids
+
+
+def _schedule_automatic_rejections(minat_ids):
+    for minat_id in minat_ids:
+        transaction.on_commit(
+            lambda minat_id=minat_id: notify_rejected_minat(
+                minat_id=minat_id, automatic=True
+            )
+        )
+
+
 @transaction.atomic
 def create_minat(
     *, requester: User, requested_copy_id: int, offered_copy_id: int, swap_zone_id: int
@@ -241,19 +261,113 @@ def accept_minat(*, minat_id: int, recipient: User) -> BookSwap:
         copy.availability_status = BookCopy.Availability.RESERVED
         copy.save(update_fields=["availability_status", "updated_at"])
 
-    automatically_rejected_ids = []
-    for other in locked_minat.values():
-        if other.pk != minat.pk and other.status == Minat.Status.PENDING:
-            other.status = Minat.Status.AUTOMATICALLY_REJECTED
-            other.resolved_at = resolved_at
-            other.save(update_fields=["status", "resolved_at", "updated_at"])
-            automatically_rejected_ids.append(other.pk)
+    automatically_rejected_ids = _automatically_reject_locked(
+        (other for other in locked_minat.values() if other.pk != minat.pk),
+        resolved_at=resolved_at,
+    )
 
     transaction.on_commit(lambda: notify_accepted_minat(minat_id=minat.pk))
-    for rejected_id in automatically_rejected_ids:
-        transaction.on_commit(
-            lambda rejected_id=rejected_id: notify_rejected_minat(
-                minat_id=rejected_id, automatic=True
-            )
-        )
+    _schedule_automatic_rejections(automatically_rejected_ids)
     return swap
+
+
+@transaction.atomic
+def update_book_copy(
+    *,
+    copy_id: int,
+    owner: User,
+    condition: str,
+    condition_note: str,
+    availability_status: str,
+) -> BookCopy:
+    users = _lock_users(owner.pk)
+    copies = _lock_copies(copy_id)
+    locked_owner = users.get(owner.pk)
+    copy = copies.get(copy_id)
+    if locked_owner is None or copy is None or copy.owner_id != locked_owner.pk:
+        raise BookCopy.DoesNotExist
+    if copy.availability_status == BookCopy.Availability.RESERVED:
+        raise ReservedCopyError
+    if availability_status not in {
+        BookCopy.Availability.AVAILABLE,
+        BookCopy.Availability.UNAVAILABLE,
+    }:
+        raise ReservedCopyError
+
+    rejected_ids = []
+    if (
+        copy.availability_status == BookCopy.Availability.AVAILABLE
+        and availability_status == BookCopy.Availability.UNAVAILABLE
+    ):
+        pending = list(
+            Minat.objects.select_for_update()
+            .filter(
+                Q(requested_copy=copy) | Q(offered_copy=copy),
+                status=Minat.Status.PENDING,
+            )
+            .order_by("pk")
+        )
+        rejected_ids = _automatically_reject_locked(
+            pending,
+            resolved_at=timezone.now(),
+        )
+
+    copy.condition = condition
+    copy.condition_note = condition_note
+    copy.availability_status = availability_status
+    copy.save(
+        update_fields=[
+            "condition",
+            "condition_note",
+            "availability_status",
+            "updated_at",
+        ]
+    )
+    _schedule_automatic_rejections(rejected_ids)
+    return copy
+
+
+@transaction.atomic
+def delete_book_copy(*, copy_id: int, owner: User) -> None:
+    users = _lock_users(owner.pk)
+    copies = _lock_copies(copy_id)
+    copy = copies.get(copy_id)
+    if users.get(owner.pk) is None or copy is None or copy.owner_id != owner.pk:
+        raise BookCopy.DoesNotExist
+    if copy.availability_status == BookCopy.Availability.RESERVED:
+        raise ReservedCopyError
+    if copy.requested_in_minat.exists() or copy.offered_in_minat.exists():
+        raise HistoricalCopyError
+    copy.delete()
+
+
+@transaction.atomic
+def deactivate_account(*, user_id: int) -> User:
+    user = User.objects.select_for_update().get(pk=user_id)
+    related_minat = list(
+        Minat.objects.select_for_update()
+        .filter(Q(requester=user) | Q(recipient=user))
+        .order_by("pk")
+    )
+    pending = [
+        minat for minat in related_minat if minat.status == Minat.Status.PENDING
+    ]
+    unfinished = list(
+        BookSwap.objects.select_for_update()
+        .filter(
+            Q(minat__requester=user) | Q(minat__recipient=user),
+            status=BookSwap.Status.COORDINATING,
+        )
+        .order_by("pk")
+    )
+    if unfinished:
+        raise UnfinishedSwapError
+
+    rejected_ids = _automatically_reject_locked(
+        pending,
+        resolved_at=timezone.now(),
+    )
+    user.is_active = False
+    user.save(update_fields=["is_active"])
+    _schedule_automatic_rejections(rejected_ids)
+    return user

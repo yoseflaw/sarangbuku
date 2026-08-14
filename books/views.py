@@ -13,6 +13,12 @@ from .forms import BookCopyForm, CatalogSearchForm, DiscoveryFilterForm, ManualB
 from .models import Book, BookCopy, WishlistItem, normalize_isbn
 from .open_library import OpenLibraryError, search_open_library
 from .services import discoverable_copies
+from swaps.services import (
+    HistoricalCopyError,
+    ReservedCopyError,
+    delete_book_copy,
+    update_book_copy,
+)
 
 
 def _active_zone_redirect(request):
@@ -111,10 +117,23 @@ def shelf(request):
 @login_required
 def copy_edit(request, pk):
     copy = get_object_or_404(BookCopy, pk=pk, owner=request.user)
+    if copy.availability_status == BookCopy.Availability.RESERVED and request.method == "GET":
+        messages.error(request, ReservedCopyError.message)
+        return redirect("books:shelf")
     form = BookCopyForm(request.POST or None, instance=copy)
     if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Bukumu sudah diperbarui.")
+        try:
+            update_book_copy(
+                copy_id=copy.pk,
+                owner=request.user,
+                condition=form.cleaned_data["condition"],
+                condition_note=form.cleaned_data["condition_note"],
+                availability_status=form.cleaned_data["availability_status"],
+            )
+        except ReservedCopyError as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, "Bukumu sudah diperbarui.")
         return redirect("books:shelf")
     return render(request, "books/copy_form.html", {"copy": copy, "form": form})
 
@@ -122,9 +141,16 @@ def copy_edit(request, pk):
 @login_required
 def copy_delete(request, pk):
     copy = get_object_or_404(BookCopy, pk=pk, owner=request.user)
+    if copy.availability_status == BookCopy.Availability.RESERVED and request.method == "GET":
+        messages.error(request, ReservedCopyError.message)
+        return redirect("books:shelf")
     if request.method == "POST":
-        copy.delete()
-        messages.success(request, "Buku sudah dihapus dari Lemari.")
+        try:
+            delete_book_copy(copy_id=copy.pk, owner=request.user)
+        except (ReservedCopyError, HistoricalCopyError) as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, "Buku sudah dihapus dari Lemari.")
         return redirect("books:shelf")
     return render(request, "books/copy_confirm_delete.html", {"copy": copy})
 

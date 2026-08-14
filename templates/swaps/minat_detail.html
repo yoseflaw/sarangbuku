@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Minat | Sarang Buku{% endblock %}
+
+{% block content %}
+<div class="py-4 mx-auto sb-form-page">
+  <h1 class="h2">Minat</h1>
+  <p><span class="badge bg-secondary">{{ minat.get_status_display }}</span></p>
+  <dl>
+    <dt>Buku yang diminta</dt>
+    <dd>{{ minat.requested_copy.book.title }} ({{ minat.requested_copy.get_condition_display }}){% if minat.requested_copy.condition_note %}<br>{{ minat.requested_copy.condition_note }}{% endif %}</dd>
+    <dt>Buku yang ditawarkan</dt>
+    <dd>{{ minat.offered_copy.book.title }} ({{ minat.offered_copy.get_condition_display }}){% if minat.offered_copy.condition_note %}<br>{{ minat.offered_copy.condition_note }}{% endif %}</dd>
+    <dt>Sarang</dt>
+    <dd>{{ minat.swap_zone.name }}</dd>
+    <dt>Dikirim</dt>
+    <dd>{{ minat.created_at }}</dd>
+  </dl>
+</div>
+{% endblock %}

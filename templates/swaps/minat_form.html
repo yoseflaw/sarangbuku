@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Ajukan Minat | Sarang Buku{% endblock %}
+
+{% block content %}
+<div class="py-5 mx-auto sb-form-page">
+  <a href="{% url 'books:discovery_detail' requested_copy.pk %}" class="text-decoration-none">&larr; Kembali</a>
+  <h1 class="h2 mt-3">Ajukan Minat</h1>
+  <p class="text-secondary">Pilih satu bukumu untuk ditukar dengan {{ requested_copy.book.title }}.</p>
+
+  <form method="post" novalidate class="card mb-4">
+    <div class="card-body">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">{% for error in form.non_field_errors %}{{ error }}{% endfor %}</div>
+      {% endif %}
+
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.offered_copy.id_for_label }}">{{ form.offered_copy.label }}</label>
+        <select class="form-select{% if form.offered_copy.errors %} is-invalid{% endif %}" name="{{ form.offered_copy.html_name }}" id="{{ form.offered_copy.id_for_label }}" required{% if form.offered_copy.errors %} aria-invalid="true" aria-describedby="{{ form.offered_copy.id_for_label }}_error"{% endif %}>
+          <option value="">Pilih buku</option>
+          {% for value, label in form.offered_copy.field.choices %}<option value="{{ value }}"{% if form.offered_copy.value|stringformat:'s' == value|stringformat:'s' %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+        {% for error in form.offered_copy.errors %}<div id="{{ form.offered_copy.id_for_label }}_error" class="invalid-feedback" role="alert">{{ error }}</div>{% endfor %}
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label" for="{{ form.swap_zone.id_for_label }}">{{ form.swap_zone.label }}</label>
+        <select class="form-select{% if form.swap_zone.errors %} is-invalid{% endif %}" name="{{ form.swap_zone.html_name }}" id="{{ form.swap_zone.id_for_label }}" required{% if form.swap_zone.errors %} aria-invalid="true" aria-describedby="{{ form.swap_zone.id_for_label }}_error"{% endif %}>
+          <option value="">Pilih Sarang</option>
+          {% for value, label in form.swap_zone.field.choices %}<option value="{{ value }}"{% if form.swap_zone.value|stringformat:'s' == value|stringformat:'s' %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+        {% for error in form.swap_zone.errors %}<div id="{{ form.swap_zone.id_for_label }}_error" class="invalid-feedback" role="alert">{{ error }}</div>{% endfor %}
+      </div>
+
+      <button class="btn btn-primary" type="submit">Kirim Minat</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -23,6 +23,7 @@
       <p><span class="badge bg-secondary">{{ copy.get_condition_display }}</span></p>
       {% if copy.condition_note %}<p>{{ copy.condition_note }}</p>{% endif %}
       <p>Sarang: {% for sarang in copy.owner.shared_active_zones %}{{ sarang.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+      <a class="btn btn-primary mb-3" href="{% url 'swaps:minat_create' copy.pk %}">Ajukan Minat</a>
       {% if copy.is_wishlisted %}
         <p class="text-success">Ada di Daftar Minat</p>
         <form method="post" action="{% url 'books:wishlist_remove' copy.book.pk %}">

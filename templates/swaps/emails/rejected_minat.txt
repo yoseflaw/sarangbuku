@@ -1,0 +1,6 @@
+{% if automatic %}Minatmu untuk {{ requested_title }} tidak dapat dilanjutkan karena salah satu bukunya sudah tidak tersedia.{% else %}Minatmu untuk {{ requested_title }} ditolak.{% endif %}
+
+Buku yang kamu tawarkan: {{ offered_title }}
+Sarang: {{ swap_zone_name }}
+
+Kamu dapat membuka Lini untuk melihat statusnya.

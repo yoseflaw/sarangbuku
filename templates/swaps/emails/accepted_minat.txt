@@ -1,0 +1,8 @@
+Minatmu diterima.
+
+Kamu akan bertukar dengan {{ other_name }}.
+Buku yang diminta: {{ requested_title }}
+Buku yang ditawarkan: {{ offered_title }}
+Sarang: {{ swap_zone_name }}
+
+Buka Tukar di Sarang Buku untuk melihat kesepakatannya.

@@ -410,7 +410,8 @@ class DiscoveryDetailTests(DiscoverySetupMixin, TestCase):
         self.assertContains(response, "Blok M")
         self.assertNotContains(response, self.owner.display_name)
         self.assertNotContains(response, self.owner.email)
-        self.assertNotContains(response, "Ajukan Minat")
+        self.assertContains(response, "Ajukan Minat")
+        self.assertContains(response, reverse("swaps:minat_create", args=[self.copy.pk]))
 
     def test_detail_does_not_expose_owners_other_copy(self):
         BookCopy.objects.create(

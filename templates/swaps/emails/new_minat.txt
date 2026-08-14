@@ -1,0 +1,7 @@
+Ada Minat baru untuk {{ requested_title }}.
+
+Buku yang ditawarkan: {{ offered_title }} ({{ offered_condition }})
+Kondisi buku yang diminta: {{ requested_condition }}
+Sarang: {{ swap_zone_name }}
+
+Masuk ke Sarang Buku dan buka Lini untuk menjawabnya.

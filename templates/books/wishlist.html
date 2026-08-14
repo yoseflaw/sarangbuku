@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Daftar Minat | Sarang Buku{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <h1>Daftar Minat</h1>
+
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }}" role="status">{{ message }}</div>
+  {% endfor %}
+
+  <div class="row">
+    <div class="col-md-8 col-lg-6">
+      <form method="get" action="{% url 'books:wishlist' %}" class="mb-4">
+        <div class="mb-3">
+          <label for="{{ form.q.id_for_label }}" class="form-label">{{ form.q.label }}</label>
+          <input type="text" name="{{ form.q.html_name }}" value="{{ form.q.value|default_if_none:'' }}"
+                 class="form-control{% if form.q.errors %} is-invalid{% endif %}"
+                 id="{{ form.q.id_for_label }}" maxlength="255" required>
+          {% if form.q.errors %}
+            <div class="invalid-feedback d-block">
+              {% for error in form.q.errors %}{{ error }}{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary">Cari di katalog</button>
+      </form>
+
+      <section aria-labelledby="tersimpan-heading" class="mb-5">
+        <h2 id="tersimpan-heading" class="h4">Tersimpan</h2>
+        {% if items %}
+          <div class="row g-3">
+            {% for item in items %}
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-body">
+                    <div class="row g-3 align-items-start">
+                      <div class="col-auto">
+                        {% if item.book.cover_url %}
+                          <img src="{{ item.book.cover_url }}" alt="Sampul {{ item.book.title }}" class="rounded" style="width: 60px; height: 90px; object-fit: cover;">
+                        {% else %}
+                          <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 90px;">
+                            <small class="text-muted">Tanpa sampul</small>
+                          </div>
+                        {% endif %}
+                      </div>
+                      <div class="col">
+                        <h3 class="h6 card-title mb-1">{{ item.book.title }}</h3>
+                        <p class="text-muted small mb-1">{{ item.book.authors }}</p>
+                        <p class="text-muted small mb-2">{{ item.book.language }}</p>
+                        <form method="post" action="{% url 'books:wishlist_remove' item.book.pk %}">
+                          {% csrf_token %}
+                          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                          <button type="submit" class="btn btn-sm btn-outline-danger">Hapus</button>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-muted">Belum ada yang disimpan.</p>
+        {% endif %}
+      </section>
+
+      {% if form.is_valid %}
+        <section aria-labelledby="hasil-heading">
+          <h2 id="hasil-heading" class="h4">Hasil katalog</h2>
+          {% if books %}
+            <div class="row g-3">
+              {% for book in books %}
+                <div class="col-12">
+                  <div class="card">
+                    <div class="card-body">
+                      <div class="row g-3 align-items-start">
+                        <div class="col-auto">
+                          {% if book.cover_url %}
+                            <img src="{{ book.cover_url }}" alt="Sampul {{ book.title }}" class="rounded" style="width: 60px; height: 90px; object-fit: cover;">
+                          {% else %}
+                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 90px;">
+                              <small class="text-muted">Tanpa sampul</small>
+                            </div>
+                          {% endif %}
+                        </div>
+                        <div class="col">
+                          <h3 class="h6 card-title mb-1">{{ book.title }}</h3>
+                          <p class="text-muted small mb-1">{{ book.authors }}</p>
+                          <p class="text-muted small mb-1">{{ book.language }}</p>
+                          {% if book.isbn %}<p class="text-muted small mb-2">{{ book.isbn }}</p>{% endif %}
+                          {% if book.is_wishlisted %}
+                            <form method="post" action="{% url 'books:wishlist_remove' book.pk %}">
+                              {% csrf_token %}
+                              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                              <button type="submit" class="btn btn-sm btn-outline-danger">Hapus</button>
+                            </form>
+                          {% else %}
+                            <form method="post" action="{% url 'books:wishlist_add' book.pk %}">
+                              {% csrf_token %}
+                              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                              <button type="submit" class="btn btn-sm btn-primary">Simpan</button>
+                            </form>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted">Tidak ada hasil lokal.</p>
+          {% endif %}
+        </section>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

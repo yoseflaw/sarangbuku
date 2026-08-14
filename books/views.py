@@ -2,12 +2,14 @@ from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
 
 from .forms import BookCopyForm, CatalogSearchForm, ManualBookCopyForm
-from .models import Book, BookCopy, normalize_isbn
+from .models import Book, BookCopy, WishlistItem, normalize_isbn
 from .open_library import OpenLibraryError, search_open_library
 
 
@@ -16,9 +18,28 @@ def _active_zone_redirect(request):
         return None
     messages.error(
         request,
-        "Pilih setidaknya satu Sarang aktif di Profil sebelum menambahkan buku.",
+        "Pilih setidaknya satu Sarang aktif di Profil untuk melanjutkan.",
     )
     return redirect("accounts:profile")
+
+
+def _local_catalog_results(query):
+    normalized = normalize_isbn(query)
+    predicate = Q(title__icontains=query) | Q(authors__icontains=query)
+    if normalized:
+        predicate |= Q(isbn=normalized)
+    return Book.objects.filter(predicate).order_by("title", "authors", "pk")[:25]
+
+
+def _post_redirect(request, fallback):
+    destination = request.POST.get("next", "")
+    if destination and url_has_allowed_host_and_scheme(
+        destination,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(destination)
+    return redirect(fallback)
 
 
 @login_required
@@ -56,18 +77,69 @@ def add(request):
     form = CatalogSearchForm(request.GET or None)
     books = Book.objects.none()
     if form.is_valid():
-        query = form.cleaned_data["q"]
-        normalized = normalize_isbn(query)
-        predicate = Q(title__icontains=query) | Q(authors__icontains=query)
-        if normalized:
-            predicate |= Q(isbn=normalized)
-        books = Book.objects.filter(predicate).order_by("title", "authors", "pk")[:25]
+        books = _local_catalog_results(form.cleaned_data["q"])
 
     return render(
         request,
         "books/add.html",
         {"form": form, "books": books},
     )
+
+
+@login_required
+def wishlist(request):
+    if response := _active_zone_redirect(request):
+        return response
+
+    form = CatalogSearchForm(request.GET or None)
+    books = Book.objects.none()
+    if form.is_valid():
+        books = _local_catalog_results(form.cleaned_data["q"]).annotate(
+            is_wishlisted=Exists(
+                WishlistItem.objects.filter(
+                    user=request.user,
+                    book_id=OuterRef("pk"),
+                )
+            )
+        )
+
+    items = WishlistItem.objects.filter(user=request.user).select_related("book")
+    return render(
+        request,
+        "books/wishlist.html",
+        {"form": form, "books": books, "items": items},
+    )
+
+
+@login_required
+@require_POST
+def wishlist_add(request, book_id):
+    if response := _active_zone_redirect(request):
+        return response
+
+    book = get_object_or_404(Book, pk=book_id)
+    _, created = WishlistItem.objects.get_or_create(user=request.user, book=book)
+    if created:
+        messages.success(request, "Sudah ditambahkan ke Daftar Minat.")
+    else:
+        messages.info(request, "Sudah ada di Daftar Minat.")
+    return _post_redirect(request, "books:wishlist")
+
+
+@login_required
+@require_POST
+def wishlist_remove(request, book_id):
+    if response := _active_zone_redirect(request):
+        return response
+
+    item = get_object_or_404(
+        WishlistItem,
+        user=request.user,
+        book_id=book_id,
+    )
+    item.delete()
+    messages.success(request, "Sudah dihapus dari Daftar Minat.")
+    return _post_redirect(request, "books:wishlist")
 
 
 @login_required

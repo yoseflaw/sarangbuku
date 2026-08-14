@@ -63,7 +63,7 @@
                   {% endif %}
                 </div>
                 <div class="col">
-                  <h2 class="h5 card-title mb-1">{{ copy.book.title }}</h2>
+                  <h2 class="h5 card-title mb-1"><a href="{% url 'books:discovery_detail' copy.pk %}" class="link-dark">{{ copy.book.title }}</a></h2>
                   <p class="text-muted small mb-1">{{ copy.book.authors }}</p>
                   {% if copy.book.isbn %}<p class="text-muted small mb-1">ISBN: {{ copy.book.isbn }}</p>{% endif %}
                   <p class="text-muted small mb-2">{{ copy.book.language }}</p>

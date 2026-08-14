@@ -86,6 +86,18 @@ def discover(request):
 
 
 @login_required
+def discovery_detail(request, pk):
+    if response := _active_zone_redirect(request):
+        return response
+
+    copy = get_object_or_404(
+        discoverable_copies(viewer=request.user),
+        pk=pk,
+    )
+    return render(request, "books/discovery_detail.html", {"copy": copy})
+
+
+@login_required
 def shelf(request):
     copies = BookCopy.objects.filter(owner=request.user).select_related("book")
     return render(request, "books/shelf.html", {"copies": copies})

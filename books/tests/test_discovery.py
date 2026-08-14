@@ -260,3 +260,88 @@ class DiscoveryListTests(DiscoverySetupMixin, TestCase):
             self.client.get(reverse("books:discover")),
             f'{reverse("accounts:login")}?next={reverse("books:discover")}',
         )
+
+
+class DiscoveryDetailTests(DiscoverySetupMixin, TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.copy = BookCopy.objects.create(
+            owner=cls.owner,
+            book=cls.book,
+            condition=BookCopy.Condition.GOOD,
+            condition_note="Sampul sedikit terlipat.",
+            is_available=True,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.viewer)
+
+    def test_eligible_detail_shows_only_permitted_information(self):
+        response = self.client.get(
+            reverse("books:discovery_detail", args=[self.copy.pk])
+        )
+
+        self.assertContains(response, "Matilda")
+        self.assertContains(response, "Roald Dahl")
+        self.assertContains(response, "Masih Bagus")
+        self.assertContains(response, "Sampul sedikit terlipat.")
+        self.assertContains(response, "Blok M")
+        self.assertNotContains(response, self.owner.display_name)
+        self.assertNotContains(response, self.owner.email)
+        self.assertNotContains(response, "Ajukan Minat")
+
+    def test_detail_does_not_expose_owners_other_copy(self):
+        BookCopy.objects.create(
+            owner=self.owner,
+            book=self.other_book,
+            condition=BookCopy.Condition.GOOD,
+            is_available=True,
+        )
+
+        response = self.client.get(
+            reverse("books:discovery_detail", args=[self.copy.pk])
+        )
+
+        self.assertNotContains(response, "Laskar Pelangi")
+
+    def test_unknown_and_each_newly_ineligible_copy_return_404(self):
+        url = reverse("books:discovery_detail", args=[self.copy.pk])
+        self.assertEqual(
+            self.client.get(reverse("books:discovery_detail", args=[999999])).status_code,
+            404,
+        )
+
+        self.copy.is_available = False
+        self.copy.save(update_fields=["is_available"])
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+        self.copy.is_available = True
+        self.copy.save(update_fields=["is_available"])
+        self.owner.is_active = False
+        self.owner.save(update_fields=["is_active"])
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+        self.owner.is_active = True
+        self.owner.save(update_fields=["is_active"])
+        self.owner.swap_zones.clear()
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_detail_uses_real_wishlist_mutations(self):
+        detail_url = reverse("books:discovery_detail", args=[self.copy.pk])
+        response = self.client.get(detail_url)
+        self.assertContains(
+            response,
+            reverse("books:wishlist_add", args=[self.book.pk]),
+        )
+
+        self.client.post(
+            reverse("books:wishlist_add", args=[self.book.pk]),
+            {"next": detail_url},
+        )
+        response = self.client.get(detail_url)
+        self.assertContains(response, "Ada di Daftar Minat")
+        self.assertContains(
+            response,
+            reverse("books:wishlist_remove", args=[self.book.pk]),
+        )

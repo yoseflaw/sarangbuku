@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}{{ copy.book.title }} | Sarang Buku{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <a href="{% url 'books:discover' %}" class="text-decoration-none">&larr; Temukan</a>
+  <div class="row g-4 mt-1">
+    <div class="col-auto">
+      {% if copy.book.cover_url %}
+        <img src="{{ copy.book.cover_url }}" alt="Sampul {{ copy.book.title }}" class="rounded" style="width: 180px; height: 270px; object-fit: cover;">
+      {% else %}
+        <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 180px; height: 270px;">
+          <span class="text-muted">Tanpa sampul</span>
+        </div>
+      {% endif %}
+    </div>
+    <div class="col">
+      <h1>{{ copy.book.title }}</h1>
+      <p class="text-muted">{{ copy.book.authors }}</p>
+      {% if copy.book.isbn %}<p>ISBN: {{ copy.book.isbn }}</p>{% endif %}
+      <p>{{ copy.book.language }}</p>
+      <p><span class="badge bg-secondary">{{ copy.get_condition_display }}</span></p>
+      {% if copy.condition_note %}<p>{{ copy.condition_note }}</p>{% endif %}
+      <p>Sarang: {% for sarang in copy.owner.shared_active_zones %}{{ sarang.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+      {% if copy.is_wishlisted %}
+        <p class="text-success">Ada di Daftar Minat</p>
+        <form method="post" action="{% url 'books:wishlist_remove' copy.book.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <button type="submit" class="btn btn-outline-danger">Hapus dari Daftar Minat</button>
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'books:wishlist_add' copy.book.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <button type="submit" class="btn btn-outline-primary">Simpan ke Daftar Minat</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

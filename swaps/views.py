@@ -1,8 +1,8 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.http import HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
 
 from books.services import discoverable_copies
 
@@ -81,9 +81,10 @@ def minat_detail(request, pk):
 
 
 @login_required
-@require_POST
 def minat_withdraw(request, pk):
     get_object_or_404(Minat, pk=pk, requester=request.user)
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
     try:
         withdraw_minat(minat_id=pk, requester=request.user)
     except MinatTransitionError as error:
@@ -94,9 +95,10 @@ def minat_withdraw(request, pk):
 
 
 @login_required
-@require_POST
 def minat_reject(request, pk):
     get_object_or_404(Minat, pk=pk, recipient=request.user)
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
     try:
         reject_minat(minat_id=pk, recipient=request.user)
     except MinatTransitionError as error:

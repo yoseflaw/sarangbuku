@@ -108,17 +108,27 @@ class LiniTests(TestCase):
 
         self.assertRedirects(response, f"{reverse('accounts:login')}?next={reverse('swaps:lini')}")
 
-    def test_non_participant_gets_404_from_detail_and_mutations(self):
+    def test_non_participant_gets_404_from_detail(self):
         self.client.force_login(self.other_user)
-        routes = (
-            ("get", "swaps:minat_detail"),
-            ("post", "swaps:minat_withdraw"),
-            ("post", "swaps:minat_reject"),
-        )
 
-        for method, route in routes:
+        response = self.client.get(reverse("swaps:minat_detail", args=[self.minat.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_non_participant_gets_404_from_action_routes_on_get(self):
+        self.client.force_login(self.other_user)
+
+        for route in ("swaps:minat_withdraw", "swaps:minat_reject"):
             with self.subTest(route=route):
-                response = getattr(self.client, method)(reverse(route, args=[self.minat.pk]))
+                response = self.client.get(reverse(route, args=[self.minat.pk]))
+                self.assertEqual(response.status_code, 404)
+
+    def test_non_participant_gets_404_from_action_routes_on_post(self):
+        self.client.force_login(self.other_user)
+
+        for route in ("swaps:minat_withdraw", "swaps:minat_reject"):
+            with self.subTest(route=route):
+                response = self.client.post(reverse(route, args=[self.minat.pk]))
                 self.assertEqual(response.status_code, 404)
 
     def test_requester_cannot_reject_and_recipient_cannot_withdraw(self):
@@ -131,7 +141,7 @@ class LiniTests(TestCase):
             self.client.post(reverse("swaps:minat_withdraw", args=[self.minat.pk])).status_code, 404
         )
 
-    def test_action_routes_reject_get_requests(self):
+    def test_participants_get_405_from_action_routes(self):
         self.client.force_login(self.requester)
         self.assertEqual(
             self.client.get(reverse("swaps:minat_withdraw", args=[self.minat.pk])).status_code, 405

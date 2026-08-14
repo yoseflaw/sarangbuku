@@ -171,6 +171,14 @@ class DiscoveryFilterFormTests(DiscoverySetupMixin, TestCase):
 
         self.assertEqual(form.fields["condition"].label, "Kondisi minimum")
 
+    def test_condition_choices_omit_redundant_worst_threshold(self):
+        form = DiscoveryFilterForm(viewer=self.viewer)
+
+        self.assertNotIn(
+            BookCopy.Condition.BAD,
+            dict(form.fields["condition"].choices),
+        )
+
 
 class DiscoveryListTests(DiscoverySetupMixin, TestCase):
     @classmethod

@@ -62,7 +62,7 @@ class DiscoveryFilterForm(forms.Form):
         self.fields["sarang"].queryset = viewer.swap_zones.filter(is_active=True)
         self.fields["condition"].choices = [
             ("", "Semua kondisi"),
-            *BookCopy.Condition.choices,
+            *BookCopy.Condition.choices[:-1],
         ]
 
     def clean_q(self):

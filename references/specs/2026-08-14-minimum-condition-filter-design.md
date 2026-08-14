@@ -16,7 +16,7 @@ Conditions retain their existing best-to-worst order:
 
 Selecting a condition includes copies at that condition and every better condition. For example, selecting `Cukup Bagus` includes `Cukup Bagus`, `Masih Bagus`, `Sangat Bagus`, and `Seperti Baru`, while excluding `Sudah Buruk`. Leaving the filter empty includes every condition.
 
-The filter label becomes `Kondisi minimum` so the threshold behavior is clear.
+The filter label becomes `Kondisi minimum` so the threshold behavior is clear. The filter omits `Sudah Buruk` because that threshold includes every condition and is therefore identical to `Semua kondisi`; `Sudah Buruk` remains a valid condition for owned copies.
 
 ## Implementation
 

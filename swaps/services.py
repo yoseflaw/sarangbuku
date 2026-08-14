@@ -55,7 +55,6 @@ def _lock_copies(*copy_ids: int) -> dict[int, BookCopy]:
     return {
         copy.pk: copy
         for copy in BookCopy.objects.select_for_update()
-        .select_related("owner", "book")
         .filter(pk__in=set(copy_ids))
         .order_by("pk")
     }
@@ -205,6 +204,11 @@ def accept_minat(*, minat_id: int, recipient: User) -> BookSwap:
     offered = copies.get(seed["offered_copy_id"])
     if (
         minat is None
+        or minat.requester_id != seed["requester_id"]
+        or minat.recipient_id != seed["recipient_id"]
+        or minat.requested_copy_id != seed["requested_copy_id"]
+        or minat.offered_copy_id != seed["offered_copy_id"]
+        or minat.swap_zone_id != seed["swap_zone_id"]
         or minat.status != Minat.Status.PENDING
         or requester is None
         or recipient is None

@@ -140,6 +140,20 @@ class AcceptanceTests(TestCase):
             )
         self.assertEqual(self.database_state(), before)
 
+    def assert_locked_relationship_change_is_refused(self, field, replacement_id):
+        lock_users = services._lock_users
+        before = self.database_state()
+
+        def change_after_seed(*user_ids):
+            Minat.objects.filter(pk=self.minat.pk).update(**{field: replacement_id})
+            return lock_users(*user_ids)
+
+        with patch("swaps.services._lock_users", side_effect=change_after_seed):
+            with self.assertRaises(MinatTransitionError):
+                services.accept_minat(minat_id=self.minat.pk, recipient=self.recipient)
+
+        self.assertEqual(self.database_state(), before)
+
     def test_only_recipient_may_accept_and_route_is_authenticated_post_only(self):
         route = reverse("swaps:minat_accept", args=[self.minat.pk])
 
@@ -177,6 +191,30 @@ class AcceptanceTests(TestCase):
         self.assertNotContains(
             self.client.get(reverse("swaps:minat_detail", args=[self.minat.pk])), route
         )
+
+    def test_locked_requester_must_match_unlocked_seed(self):
+        replacement = self.make_user("Peminta Pengganti")
+        self.assert_locked_relationship_change_is_refused("requester_id", replacement.pk)
+
+    def test_locked_recipient_must_match_unlocked_seed(self):
+        replacement = self.make_user("Penerima Pengganti")
+        self.assert_locked_relationship_change_is_refused("recipient_id", replacement.pk)
+
+    def test_locked_requested_copy_must_match_unlocked_seed(self):
+        replacement = self.make_copy(self.recipient, "Buku Diminta Pengganti")
+        self.assert_locked_relationship_change_is_refused("requested_copy_id", replacement.pk)
+
+    def test_locked_offered_copy_must_match_unlocked_seed(self):
+        replacement = self.make_copy(self.requester, "Buku Ditawarkan Pengganti")
+        self.assert_locked_relationship_change_is_refused("offered_copy_id", replacement.pk)
+
+    def test_locked_sarang_must_match_unlocked_seed(self):
+        replacement = SwapZone.objects.create(
+            name="Sarang Pengganti", description="Bertemu di teras."
+        )
+        self.requester.swap_zones.add(replacement)
+        self.recipient.swap_zones.add(replacement)
+        self.assert_locked_relationship_change_is_refused("swap_zone_id", replacement.pk)
 
     def test_non_pending_minat_is_refused_without_changes(self):
         self.minat.status = Minat.Status.REJECTED

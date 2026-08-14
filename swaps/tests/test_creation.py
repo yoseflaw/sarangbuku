@@ -4,15 +4,21 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.mail import send_mail
-from django.db import IntegrityError
+from django.db import IntegrityError, connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from accounts.models import SwapZone
 from books.models import Book, BookCopy
 from swaps.forms import MinatCreateForm
 from swaps.models import Minat
-from swaps.services import DuplicatePendingMinat, MinatEligibilityError, create_minat
+from swaps.services import (
+    DuplicatePendingMinat,
+    MinatEligibilityError,
+    _lock_copies,
+    create_minat,
+)
 
 
 class MinatCreationTests(TestCase):
@@ -82,6 +88,18 @@ class MinatCreationTests(TestCase):
         self.assertQuerySetEqual(form.fields["offered_copy"].queryset, [self.offered])
         self.assertQuerySetEqual(form.fields["swap_zone"].queryset, [self.shared])
         self.assertNotIn(unavailable, form.fields["offered_copy"].queryset)
+
+    def test_copy_lock_query_locks_only_bookcopy_rows(self):
+        self.assertEqual(connection.vendor, "postgresql")
+
+        with CaptureQueriesContext(connection) as queries:
+            _lock_copies(self.requested.pk, self.offered.pk)
+
+        self.assertEqual(len(queries), 1)
+        sql = queries[0]["sql"]
+        self.assertIn('FROM "books_bookcopy"', sql)
+        self.assertIn("FOR UPDATE", sql)
+        self.assertNotIn(" JOIN ", sql)
 
     def test_create_revalidates_and_keeps_both_sides_anonymous(self):
         self.client.force_login(self.requester)

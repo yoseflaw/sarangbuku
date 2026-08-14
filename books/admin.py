@@ -11,8 +11,8 @@ class BookAdmin(admin.ModelAdmin):
 
 @admin.register(BookCopy)
 class BookCopyAdmin(admin.ModelAdmin):
-    list_display = ("book", "owner", "condition", "is_available")
-    list_filter = ("condition", "is_available")
+    list_display = ("book", "owner", "condition", "availability_status")
+    list_filter = ("condition", "availability_status")
     search_fields = ("book__title", "book__authors", "book__isbn", "owner__email")
     list_select_related = ("book", "owner")
 

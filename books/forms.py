@@ -6,14 +6,25 @@ from accounts.models import SwapZone
 from .models import Book, BookCopy, normalize_isbn, validate_isbn
 
 
+MEMBER_AVAILABILITY_CHOICES = (
+    (BookCopy.Availability.AVAILABLE, "Tersedia untuk ditukar"),
+    (BookCopy.Availability.UNAVAILABLE, "Tidak tersedia"),
+)
+
+
 class BookCopyForm(forms.ModelForm):
+    availability_status = forms.ChoiceField(
+        label="Ketersediaan",
+        choices=MEMBER_AVAILABILITY_CHOICES,
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
     class Meta:
         model = BookCopy
-        fields = ("condition", "condition_note", "is_available")
+        fields = ("condition", "condition_note", "availability_status")
         labels = {
             "condition": "Kondisi",
             "condition_note": "Catatan kondisi",
-            "is_available": "Tersedia untuk ditukar",
         }
         help_texts = {
             "condition_note": "Opsional, maksimal 140 karakter.",
@@ -104,8 +115,10 @@ class ManualBookCopyForm(forms.Form):
         widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
         help_text="Opsional, maksimal 140 karakter.",
     )
-    is_available = forms.BooleanField(
-        label="Tersedia untuk ditukar", required=False, initial=True
+    availability_status = forms.ChoiceField(
+        label="Ketersediaan",
+        choices=MEMBER_AVAILABILITY_CHOICES,
+        widget=forms.Select(attrs={"class": "form-select"}),
     )
 
     def clean_isbn(self):
@@ -118,7 +131,7 @@ class ManualBookCopyForm(forms.Form):
         from .services import create_book_copy
 
         book_fields = ("title", "authors", "isbn", "language", "cover_url")
-        copy_fields = ("condition", "condition_note", "is_available")
+        copy_fields = ("condition", "condition_note", "availability_status")
         return create_book_copy(
             owner=owner,
             book_data={name: self.cleaned_data[name] for name in book_fields},

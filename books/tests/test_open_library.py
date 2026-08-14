@@ -331,7 +331,7 @@ class OpenLibraryViewTests(TestCase):
                 "language": "eng",
                 "cover_url": "javascript:alert(1)",
                 "condition": BookCopy.Condition.GOOD,
-                "is_available": "on",
+                "availability_status": "available",
             },
         )
 

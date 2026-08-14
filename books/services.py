@@ -34,7 +34,7 @@ def discoverable_copies(*, viewer):
 
     return (
         BookCopy.objects.filter(
-            is_available=True,
+            availability_status=BookCopy.Availability.AVAILABLE,
             owner__is_active=True,
             owner__swap_zones__in=shared_active_zones,
         )

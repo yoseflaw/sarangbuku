@@ -105,7 +105,7 @@ class CatalogCopyCreationTests(TestCase):
         response = self.client.post(reverse("books:copy_create", args=[self.book.pk]), {
             "condition": BookCopy.Condition.GOOD,
             "condition_note": "Well maintained",
-            "is_available": True,
+            "availability_status": "available",
         })
         
         self.assertRedirects(response, reverse("books:shelf"))
@@ -116,13 +116,13 @@ class CatalogCopyCreationTests(TestCase):
         copy = BookCopy.objects.get(owner=self.user, book=self.book)
         self.assertEqual(copy.condition, BookCopy.Condition.GOOD)
         self.assertEqual(copy.condition_note, "Well maintained")
-        self.assertTrue(copy.is_available)
+        self.assertEqual(copy.availability_status, BookCopy.Availability.AVAILABLE)
 
     def test_successful_copy_creation_redirects_to_shelf_with_message(self):
         self.client.force_login(self.user)
         response = self.client.post(reverse("books:copy_create", args=[self.book.pk]), {
             "condition": BookCopy.Condition.LIKE_NEW,
-            "is_available": True,
+            "availability_status": "available",
         }, follow=True)
         
         self.assertRedirects(response, reverse("books:shelf"))
@@ -134,7 +134,7 @@ class CatalogCopyCreationTests(TestCase):
         
         response = self.client.post(reverse("books:copy_create", args=[self.book.pk]), {
             # Missing required condition field
-            "is_available": True,
+            "availability_status": "available",
         })
         
         self.assertEqual(response.status_code, 200)  # Form validation failed
@@ -151,7 +151,7 @@ class CatalogCopyCreationTests(TestCase):
         
         response = self.client.post(reverse("books:copy_create", args=[self.book.pk]), {
             "condition": BookCopy.Condition.GOOD,
-            "is_available": True,
+            "availability_status": "available",
         })
         
         self.assertRedirects(response, reverse("accounts:profile"))

@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from books.forms import BookCopyForm, ManualBookCopyForm
 from books.models import Book, BookCopy
 
 User = get_user_model()
@@ -38,14 +39,25 @@ class ShelfTests(TestCase):
             book=self.owners_book,
             condition=BookCopy.Condition.GOOD,
             condition_note="Sedikit lecek",
-            is_available=True,
+            availability_status=BookCopy.Availability.AVAILABLE,
         )
         self.other_copy = BookCopy.objects.create(
             owner=self.other_user,
             book=self.other_book,
             condition=BookCopy.Condition.LIKE_NEW,
-            is_available=True,
+            availability_status=BookCopy.Availability.AVAILABLE,
         )
+
+    def test_member_forms_never_offer_reserved(self):
+        edit_form = BookCopyForm(instance=self.copy)
+        manual_form = ManualBookCopyForm()
+
+        expected = {
+            BookCopy.Availability.AVAILABLE,
+            BookCopy.Availability.UNAVAILABLE,
+        }
+        self.assertEqual(set(dict(edit_form.fields["availability_status"].choices)), expected)
+        self.assertEqual(set(dict(manual_form.fields["availability_status"].choices)), expected)
 
     def test_anonymous_user_is_redirected_to_login(self):
         response = self.client.get(reverse("books:shelf"))
@@ -61,9 +73,9 @@ class ShelfTests(TestCase):
         self.assertNotContains(response, self.other_book.title)
 
     def test_shelf_shows_unavailable_copy_and_approved_condition_label(self):
-        self.copy.is_available = False
+        self.copy.availability_status = BookCopy.Availability.UNAVAILABLE
         self.copy.condition = BookCopy.Condition.VERY_GOOD
-        self.copy.save(update_fields=("is_available", "condition"))
+        self.copy.save(update_fields=("availability_status", "condition"))
         self.client.force_login(self.owner)
         response = self.client.get(reverse("books:shelf"))
         self.assertContains(response, "Sangat Bagus")
@@ -115,7 +127,7 @@ class ShelfTests(TestCase):
         self.client.force_login(self.other_user)
         response = self.client.post(reverse("books:copy_edit", args=[self.copy.pk]), {
             "condition": BookCopy.Condition.BAD,
-            "is_available": False,
+            "availability_status": "unavailable",
         })
         self.assertEqual(response.status_code, 404)
 
@@ -124,14 +136,14 @@ class ShelfTests(TestCase):
         response = self.client.post(reverse("books:copy_edit", args=[self.copy.pk]), {
             "condition": BookCopy.Condition.BAD,
             "condition_note": "Rusak parah",
-            "is_available": False,
+            "availability_status": "unavailable",
         })
         self.assertRedirects(response, reverse("books:shelf"))
         
         self.copy.refresh_from_db()
         self.assertEqual(self.copy.condition, BookCopy.Condition.BAD)
         self.assertEqual(self.copy.condition_note, "Rusak parah")
-        self.assertFalse(self.copy.is_available)
+        self.assertEqual(self.copy.availability_status, BookCopy.Availability.UNAVAILABLE)
 
     def test_copy_edit_cannot_change_book_or_owner(self):
         # Form should not have these fields, but test security anyway
@@ -141,7 +153,7 @@ class ShelfTests(TestCase):
         
         self.client.post(reverse("books:copy_edit", args=[self.copy.pk]), {
             "condition": BookCopy.Condition.FAIR,
-            "is_available": True,
+            "availability_status": "available",
             "book": self.other_book.pk,
             "owner": self.other_user.pk,
         })

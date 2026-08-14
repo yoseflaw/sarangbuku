@@ -79,6 +79,11 @@ class BookCopy(models.Model):
         FAIR = "fair", "Cukup Bagus"
         BAD = "bad", "Sudah Buruk"
 
+    class Availability(models.TextChoices):
+        AVAILABLE = "available", "Tersedia"
+        RESERVED = "reserved", "Ada Peminat"
+        UNAVAILABLE = "unavailable", "Tidak tersedia"
+
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -91,7 +96,11 @@ class BookCopy(models.Model):
     )
     condition = models.CharField(max_length=20, choices=Condition.choices)
     condition_note = models.CharField(max_length=140, blank=True)
-    is_available = models.BooleanField(default=True)
+    availability_status = models.CharField(
+        max_length=11,
+        choices=Availability.choices,
+        default=Availability.AVAILABLE,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -101,7 +110,13 @@ class BookCopy(models.Model):
             models.CheckConstraint(
                 condition=Q(condition__in=["like_new", "very_good", "good", "fair", "bad"]),
                 name="books_bookcopy_condition_valid",
-            )
+            ),
+            models.CheckConstraint(
+                condition=Q(
+                    availability_status__in=["available", "reserved", "unavailable"]
+                ),
+                name="books_bookcopy_availability_valid",
+            ),
         ]
 
     def __str__(self):

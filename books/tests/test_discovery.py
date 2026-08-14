@@ -77,7 +77,7 @@ class DiscoverableCopiesTests(DiscoverySetupMixin, TestCase):
             owner=self.owner,
             book=self.book,
             condition=BookCopy.Condition.GOOD,
-            is_available=True,
+            availability_status=BookCopy.Availability.AVAILABLE,
         )
 
         result = list(discoverable_copies(viewer=self.viewer))
@@ -93,31 +93,37 @@ class DiscoverableCopiesTests(DiscoverySetupMixin, TestCase):
             owner=self.owner,
             book=self.book,
             condition=BookCopy.Condition.GOOD,
-            is_available=True,
+            availability_status=BookCopy.Availability.AVAILABLE,
         )
         BookCopy.objects.create(
             owner=self.viewer,
             book=self.other_book,
             condition=BookCopy.Condition.GOOD,
-            is_available=True,
+            availability_status=BookCopy.Availability.AVAILABLE,
         )
         BookCopy.objects.create(
             owner=self.owner,
             book=self.other_book,
             condition=BookCopy.Condition.GOOD,
-            is_available=False,
+            availability_status=BookCopy.Availability.RESERVED,
+        )
+        BookCopy.objects.create(
+            owner=self.owner,
+            book=self.other_book,
+            condition=BookCopy.Condition.GOOD,
+            availability_status=BookCopy.Availability.UNAVAILABLE,
         )
         BookCopy.objects.create(
             owner=self.other_owner,
             book=self.other_book,
             condition=BookCopy.Condition.GOOD,
-            is_available=True,
+            availability_status=BookCopy.Availability.AVAILABLE,
         )
         BookCopy.objects.create(
             owner=self.inactive_owner,
             book=self.other_book,
             condition=BookCopy.Condition.GOOD,
-            is_available=True,
+            availability_status=BookCopy.Availability.AVAILABLE,
         )
 
         self.assertEqual(list(discoverable_copies(viewer=self.viewer)), [eligible])
@@ -128,7 +134,7 @@ class DiscoverableCopiesTests(DiscoverySetupMixin, TestCase):
             owner=self.owner,
             book=self.book,
             condition=BookCopy.Condition.GOOD,
-            is_available=True,
+            availability_status=BookCopy.Availability.AVAILABLE,
         )
 
         self.assertNotIn(copy, discoverable_copies(viewer=self.viewer))
@@ -138,7 +144,7 @@ class DiscoverableCopiesTests(DiscoverySetupMixin, TestCase):
             owner=self.owner,
             book=self.book,
             condition=BookCopy.Condition.GOOD,
-            is_available=True,
+            availability_status=BookCopy.Availability.AVAILABLE,
         )
         WishlistItem.objects.create(user=self.viewer, book=self.book)
 
@@ -189,7 +195,7 @@ class DiscoveryListTests(DiscoverySetupMixin, TestCase):
             book=cls.book,
             condition=BookCopy.Condition.GOOD,
             condition_note="Sampul sedikit terlipat.",
-            is_available=True,
+            availability_status=BookCopy.Availability.AVAILABLE,
         )
 
     def setUp(self):
@@ -229,7 +235,7 @@ class DiscoveryListTests(DiscoverySetupMixin, TestCase):
                 owner=self.owner,
                 book=book,
                 condition=condition,
-                is_available=True,
+                availability_status=BookCopy.Availability.AVAILABLE,
             )
 
         response = self.client.get(
@@ -268,7 +274,7 @@ class DiscoveryListTests(DiscoverySetupMixin, TestCase):
             owner=self.owner,
             book=other_edition,
             condition=BookCopy.Condition.GOOD,
-            is_available=True,
+            availability_status=BookCopy.Availability.AVAILABLE,
         )
 
         response = self.client.get(
@@ -323,7 +329,7 @@ class DiscoveryListTests(DiscoverySetupMixin, TestCase):
                 owner=self.owner,
                 book=book,
                 condition=BookCopy.Condition.GOOD,
-                is_available=True,
+                availability_status=BookCopy.Availability.AVAILABLE,
             )
 
         response = self.client.get(
@@ -361,7 +367,7 @@ class DiscoveryDetailTests(DiscoverySetupMixin, TestCase):
             book=cls.book,
             condition=BookCopy.Condition.GOOD,
             condition_note="Sampul sedikit terlipat.",
-            is_available=True,
+            availability_status=BookCopy.Availability.AVAILABLE,
         )
 
     def setUp(self):
@@ -411,7 +417,7 @@ class DiscoveryDetailTests(DiscoverySetupMixin, TestCase):
             owner=self.owner,
             book=self.other_book,
             condition=BookCopy.Condition.GOOD,
-            is_available=True,
+            availability_status=BookCopy.Availability.AVAILABLE,
         )
 
         response = self.client.get(
@@ -427,12 +433,12 @@ class DiscoveryDetailTests(DiscoverySetupMixin, TestCase):
             404,
         )
 
-        self.copy.is_available = False
-        self.copy.save(update_fields=["is_available"])
+        self.copy.availability_status = BookCopy.Availability.UNAVAILABLE
+        self.copy.save(update_fields=["availability_status"])
         self.assertEqual(self.client.get(url).status_code, 404)
 
-        self.copy.is_available = True
-        self.copy.save(update_fields=["is_available"])
+        self.copy.availability_status = BookCopy.Availability.AVAILABLE
+        self.copy.save(update_fields=["availability_status"])
         self.owner.is_active = False
         self.owner.save(update_fields=["is_active"])
         self.assertEqual(self.client.get(url).status_code, 404)

@@ -21,7 +21,7 @@ VALID_DATA = {
     "cover_url": "https://covers.openlibrary.org/b/id/123-M.jpg",
     "condition": "good",
     "condition_note": "Ada sedikit lipatan.",
-    "is_available": "on",
+    "availability_status": "available",
 }
 
 
@@ -50,7 +50,7 @@ class ManualEntryTests(TestCase):
         self.assertEqual(copy.book, book)
         self.assertEqual(copy.condition, "good")
         self.assertEqual(copy.condition_note, "Ada sedikit lipatan.")
-        self.assertTrue(copy.is_available)
+        self.assertEqual(copy.availability_status, BookCopy.Availability.AVAILABLE)
 
     def test_invalid_isbn_checksum_rejected(self):
         data = VALID_DATA.copy()

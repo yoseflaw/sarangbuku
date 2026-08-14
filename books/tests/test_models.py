@@ -139,6 +139,33 @@ class BookModelTests(TestCase):
             copy.save()
 
 
+class BookCopyAvailabilityTests(TestCase):
+    def test_availability_values_labels_and_default_are_canonical(self):
+        field = BookCopy._meta.get_field("availability_status")
+        self.assertEqual(
+            list(BookCopy.Availability.choices),
+            [
+                ("available", "Tersedia"),
+                ("reserved", "Ada Peminat"),
+                ("unavailable", "Tidak tersedia"),
+            ],
+        )
+        self.assertEqual(field.default, BookCopy.Availability.AVAILABLE)
+
+    def test_unknown_availability_is_rejected_by_database(self):
+        owner = get_user_model().objects.create_user(
+            email="status@example.com", password="safe-test-password"
+        )
+        book = Book.objects.create(title="Status", authors="Penulis", language="Indonesia")
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            BookCopy.objects.create(
+                owner=owner,
+                book=book,
+                condition=BookCopy.Condition.GOOD,
+                availability_status="unknown",
+            )
+
+
 class WishlistItemModelTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -200,8 +227,8 @@ class AdminTests(SimpleTestCase):
         from books.admin import BookCopyAdmin
         
         self.assertIsInstance(admin.site._registry[BookCopy], BookCopyAdmin)
-        self.assertEqual(BookCopyAdmin.list_display, ("book", "owner", "condition", "is_available"))
-        self.assertEqual(BookCopyAdmin.list_filter, ("condition", "is_available"))
+        self.assertEqual(BookCopyAdmin.list_display, ("book", "owner", "condition", "availability_status"))
+        self.assertEqual(BookCopyAdmin.list_filter, ("condition", "availability_status"))
         self.assertEqual(BookCopyAdmin.search_fields, ("book__title", "book__authors", "book__isbn", "owner__email"))
         self.assertEqual(BookCopyAdmin.list_select_related, ("book", "owner"))
 

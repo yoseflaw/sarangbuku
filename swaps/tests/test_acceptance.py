@@ -384,7 +384,8 @@ class AcceptanceTests(TestCase):
                 follow=True,
             )
 
-        self.assertRedirects(response, reverse("swaps:minat_detail", args=[self.minat.pk]))
+        swap = BookSwap.objects.get(minat=self.minat)
+        self.assertRedirects(response, reverse("swaps:swap_detail", args=[swap.pk]))
         self.assertContains(response, "Minat diterima. Tukar ini siap dikoordinasikan.")
         self.assertContains(self.client.get(reverse("swaps:lini")), "Diterima")
 

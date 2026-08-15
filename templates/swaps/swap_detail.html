@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Tukar {{ swap.minat.requested_copy.book.title }} | Sarang Buku{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <h1 class="h2">Tukar {{ swap.minat.requested_copy.book.title }} dan {{ swap.minat.offered_copy.book.title }}</h1>
+  {% for message in messages %}
+    <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}" role="alert">{{ message }}</div>
+  {% endfor %}
+
+  <section class="mt-4" aria-labelledby="peserta-tukar">
+    <h2 id="peserta-tukar" class="h4">Peserta</h2>
+    <p>{{ swap.minat.requester.display_name }} dan {{ swap.minat.recipient.display_name }}</p>
+  </section>
+
+  <section class="mt-4" aria-labelledby="buku-diminta">
+    <h2 id="buku-diminta" class="h4">Buku yang diminta</h2>
+    <p class="mb-1"><strong>{{ swap.minat.requested_copy.book.title }}</strong> oleh {{ swap.minat.requested_copy.book.authors }}</p>
+    <p class="mb-1">Kondisi: {{ swap.minat.requested_copy.get_condition_display }}</p>
+    {% if swap.minat.requested_copy.condition_note %}<p class="mb-0">Catatan kondisi: {{ swap.minat.requested_copy.condition_note }}</p>{% endif %}
+  </section>
+
+  <section class="mt-4" aria-labelledby="buku-ditawarkan">
+    <h2 id="buku-ditawarkan" class="h4">Buku yang ditawarkan</h2>
+    <p class="mb-1"><strong>{{ swap.minat.offered_copy.book.title }}</strong> oleh {{ swap.minat.offered_copy.book.authors }}</p>
+    <p class="mb-1">Kondisi: {{ swap.minat.offered_copy.get_condition_display }}</p>
+    {% if swap.minat.offered_copy.condition_note %}<p class="mb-0">Catatan kondisi: {{ swap.minat.offered_copy.condition_note }}</p>{% endif %}
+  </section>
+
+  <section class="mt-4" aria-labelledby="sarang-tukar">
+    <h2 id="sarang-tukar" class="h4">Sarang</h2>
+    <p class="mb-1">{{ swap.swap_zone.name }}</p>
+    <p class="mb-0">{{ swap.swap_zone.description }}</p>
+  </section>
+</div>
+{% endblock %}

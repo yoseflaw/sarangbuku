@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from accounts.models import SwapZone
 from books.models import Book, BookCopy
-from swaps.models import Minat
+from swaps.models import BookSwap, Minat
 from swaps.services import MinatTransitionError, reject_minat, withdraw_minat
 
 
@@ -73,6 +73,7 @@ class LiniTests(TestCase):
             status=Minat.Status.ACCEPTED,
             resolved_at=base + timedelta(minutes=3),
         )
+        BookSwap.objects.create(minat=accepted, swap_zone=self.zone)
         for index, minat in enumerate((received, sent, older, newer, automatic, accepted)):
             Minat.objects.filter(pk=minat.pk).update(created_at=base + timedelta(minutes=index))
 

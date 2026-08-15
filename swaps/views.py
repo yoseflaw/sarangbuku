@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from books.services import discoverable_copies
 
 from .forms import MinatCreateForm
-from .models import Minat
+from .models import BookSwap, Minat
 from .services import (
     DuplicatePendingMinat,
     MinatEligibilityError,
@@ -66,6 +66,34 @@ def lini(request):
     return render(request, "swaps/lini.html", {"received": received, "sent": sent, "history": history})
 
 
+def _participant_swaps(user):
+    return (
+        BookSwap.objects.filter(
+            Q(minat__requester=user) | Q(minat__recipient=user),
+            minat__status=Minat.Status.ACCEPTED,
+        )
+        .select_related(
+            "minat__requester",
+            "minat__recipient",
+            "minat__requested_copy__book",
+            "minat__offered_copy__book",
+            "swap_zone",
+        )
+        .distinct()
+    )
+
+
+@login_required
+def swap_list(request):
+    return render(request, "swaps/swap_list.html", {"swaps": _participant_swaps(request.user)})
+
+
+@login_required
+def swap_detail(request, pk):
+    swap = get_object_or_404(_participant_swaps(request.user), pk=pk)
+    return render(request, "swaps/swap_detail.html", {"swap": swap})
+
+
 @login_required
 def minat_detail(request, pk):
     minat = get_object_or_404(
@@ -115,9 +143,9 @@ def minat_accept(request, pk):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
     try:
-        accept_minat(minat_id=pk, recipient=request.user)
+        swap = accept_minat(minat_id=pk, recipient=request.user)
     except MinatTransitionError as error:
         messages.error(request, str(error))
-    else:
-        messages.success(request, "Minat diterima. Tukar ini siap dikoordinasikan.")
-    return redirect("swaps:minat_detail", pk=pk)
+        return redirect("swaps:minat_detail", pk=pk)
+    messages.success(request, "Minat diterima. Tukar ini siap dikoordinasikan.")
+    return redirect("swaps:swap_detail", pk=swap.pk)

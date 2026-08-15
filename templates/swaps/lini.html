@@ -46,7 +46,10 @@
         <h3 class="h5"><a href="{% url 'swaps:minat_detail' minat.pk %}">{{ minat.requested_copy.book.title }} dan {{ minat.offered_copy.book.title }}</a></h3>
         <p class="mb-1">{{ minat.requested_copy.get_condition_display }} dan {{ minat.offered_copy.get_condition_display }}</p>
         <p class="mb-1">Sarang: {{ minat.swap_zone.name }}</p>
-        <p class="mb-0"><span class="badge bg-secondary">{{ minat.get_status_display }}</span> · {{ minat.created_at }}</p>
+        <p class="mb-3"><span class="badge bg-secondary">{{ minat.get_status_display }}</span> · {{ minat.created_at }}</p>
+        {% if minat.status == "accepted" %}
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'swaps:swap_detail' minat.book_swap.pk %}">Lihat Tukar</a>
+        {% endif %}
       </div></article>
     {% empty %}
       <p>Belum ada riwayat Minat.</p>

@@ -19,6 +19,8 @@
           <a href="{% url 'books:shelf' %}">Lemari</a>
           <a href="{% url 'books:add' %}">Tambah</a>
           <a href="{% url 'books:wishlist' %}">Daftar Minat</a>
+          <a href="{% url 'swaps:lini' %}">Lini</a>
+          <a href="{% url 'swaps:swap_list' %}">Tukar</a>
           <a href="{% url 'accounts:profile' %}">Profil</a>
           <form method="post" action="{% url 'accounts:logout' %}" class="mb-0">
             {% csrf_token %}

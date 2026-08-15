@@ -6,6 +6,8 @@ app_name = "swaps"
 
 urlpatterns = [
     path("lini/", views.lini, name="lini"),
+    path("tukar/", views.swap_list, name="swap_list"),
+    path("tukar/<int:pk>/", views.swap_detail, name="swap_detail"),
     path("minat/ajukan/<int:requested_copy_id>/", views.minat_create, name="minat_create"),
     path("minat/<int:pk>/", views.minat_detail, name="minat_detail"),
     path("minat/<int:pk>/batal/", views.minat_withdraw, name="minat_withdraw"),

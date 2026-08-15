@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Tukar | Sarang Buku{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <h1 class="h2">Tukar</h1>
+  <section class="mt-4" aria-labelledby="daftar-tukar">
+    <h2 id="daftar-tukar" class="h4">Tukar yang sedang berjalan</h2>
+    {% for swap in swaps %}
+      <article class="card mb-3"><div class="card-body">
+        <h3 class="h5"><a href="{% url 'swaps:swap_detail' swap.pk %}">{{ swap.minat.requested_copy.book.title }} dan {{ swap.minat.offered_copy.book.title }}</a></h3>
+        <p class="mb-0">Sarang: {{ swap.swap_zone.name }}</p>
+      </div></article>
+    {% empty %}
+      <p>Belum ada Tukar yang sedang berjalan.</p>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

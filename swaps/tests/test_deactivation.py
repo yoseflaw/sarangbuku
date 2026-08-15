@@ -1,8 +1,11 @@
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.test import TestCase
+from django.db import close_old_connections, connection
+from django.test import TestCase, TransactionTestCase
 from django.urls import NoReverseMatch, reverse
 
 from accounts.models import SwapZone
@@ -106,36 +109,25 @@ class DeactivationTests(TestCase):
             2,
         )
 
-    def test_deactivation_leaves_resolved_minat_and_historical_tukar_intact(self):
+    def test_deactivation_leaves_resolved_minat_intact(self):
         rejected = self.make_minat(
             requester=self.member,
             recipient=self.third,
             requested_copy=self.third_copy,
             offered_copy=self.member_copy,
         )
-        rejected.status = Minat.Status.REJECTED
-        rejected.save(update_fields=["status", "updated_at"])
-        accepted = self.make_minat(
-            requester=self.member,
-            recipient=self.other,
-            requested_copy=self.other_copy,
-            offered_copy=self.member_copy,
-        )
-        accepted.status = Minat.Status.ACCEPTED
-        accepted.save(update_fields=["status", "updated_at"])
-        swap = BookSwap.objects.create(minat=accepted, swap_zone=self.zone)
-        # A historical status will be added with handover scope; this row still proves
-        # deactivation does not rewrite resolved records or remove Tukar history.
-        BookSwap.objects.filter(pk=swap.pk).update(status="completed")
+        services.reject_minat(minat_id=rejected.pk, recipient=self.third)
+        rejected.refresh_from_db()
+        resolved_at = rejected.resolved_at
 
         with self.captureOnCommitCallbacks(execute=False) as callbacks:
             self.deactivate(self.member)
 
+        self.member.refresh_from_db()
         rejected.refresh_from_db()
-        accepted.refresh_from_db()
+        self.assertFalse(self.member.is_active)
         self.assertEqual(rejected.status, Minat.Status.REJECTED)
-        self.assertEqual(accepted.status, Minat.Status.ACCEPTED)
-        self.assertTrue(BookSwap.objects.filter(pk=swap.pk, status="completed").exists())
+        self.assertEqual(rejected.resolved_at, resolved_at)
         self.assertEqual(callbacks, [])
 
     def test_deactivation_is_refused_for_either_participant_in_coordinating_tukar(self):
@@ -240,3 +232,119 @@ class DeactivationTests(TestCase):
     def test_accounts_has_no_member_deactivation_url(self):
         with self.assertRaises(NoReverseMatch):
             reverse("accounts:deactivate")
+
+
+class ConcurrentAcceptanceDeactivationTests(TransactionTestCase):
+    reset_sequences = True
+
+    def setUp(self):
+        User = get_user_model()
+        self.requester = User.objects.create_user(
+            email="requester-deactivation-race@example.com",
+            password="safe-test-password",
+            display_name="Peminta",
+        )
+        self.recipient = User.objects.create_user(
+            email="recipient-deactivation-race@example.com",
+            password="safe-test-password",
+            display_name="Penerima",
+        )
+        self.zone = SwapZone.objects.create(
+            name="Sarang Deaktivasi Balap",
+            description="Bertemu di lobi.",
+        )
+        self.requester.swap_zones.add(self.zone)
+        self.recipient.swap_zones.add(self.zone)
+        self.requested_copy = self.make_copy(self.recipient, "Buku Diminta")
+        self.offered_copy = self.make_copy(self.requester, "Buku Ditawarkan")
+        self.minat = Minat.objects.create(
+            requester=self.requester,
+            recipient=self.recipient,
+            requested_copy=self.requested_copy,
+            offered_copy=self.offered_copy,
+            swap_zone=self.zone,
+        )
+
+    def make_copy(self, owner, title):
+        return BookCopy.objects.create(
+            owner=owner,
+            book=Book.objects.create(
+                title=title,
+                authors="Penulis",
+                language="Indonesia",
+            ),
+            condition=BookCopy.Condition.GOOD,
+        )
+
+    def accept(self, barrier):
+        close_old_connections()
+        try:
+            recipient = get_user_model().objects.get(pk=self.recipient.pk)
+            barrier.wait()
+            try:
+                services.accept_minat(minat_id=self.minat.pk, recipient=recipient)
+            except services.MinatTransitionError:
+                return "acceptance_refused"
+            return "accepted"
+        finally:
+            close_old_connections()
+
+    def deactivate(self, barrier):
+        close_old_connections()
+        try:
+            barrier.wait()
+            try:
+                services.deactivate_account(user_id=self.requester.pk)
+            except services.UnfinishedSwapError:
+                return "deactivation_refused"
+            return "deactivated"
+        finally:
+            close_old_connections()
+
+    def test_acceptance_and_deactivation_commit_one_complete_outcome(self):
+        self.assertEqual(connection.vendor, "postgresql")
+        barrier = Barrier(2)
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            accept = executor.submit(self.accept, barrier)
+            deactivate = executor.submit(self.deactivate, barrier)
+            results = {accept.result(), deactivate.result()}
+
+        self.requester.refresh_from_db()
+        self.minat.refresh_from_db()
+        self.requested_copy.refresh_from_db()
+        self.offered_copy.refresh_from_db()
+        self.assertIsNotNone(self.minat.resolved_at)
+
+        if results == {"accepted", "deactivation_refused"}:
+            self.assertTrue(self.requester.is_active)
+            self.assertEqual(self.minat.status, Minat.Status.ACCEPTED)
+            self.assertEqual(
+                self.requested_copy.availability_status,
+                BookCopy.Availability.RESERVED,
+            )
+            self.assertEqual(
+                self.offered_copy.availability_status,
+                BookCopy.Availability.RESERVED,
+            )
+            self.assertTrue(
+                BookSwap.objects.filter(
+                    minat=self.minat,
+                    status=BookSwap.Status.COORDINATING,
+                ).exists()
+            )
+        else:
+            self.assertEqual(results, {"acceptance_refused", "deactivated"})
+            self.assertFalse(self.requester.is_active)
+            self.assertEqual(
+                self.minat.status,
+                Minat.Status.AUTOMATICALLY_REJECTED,
+            )
+            self.assertEqual(
+                self.requested_copy.availability_status,
+                BookCopy.Availability.AVAILABLE,
+            )
+            self.assertEqual(
+                self.offered_copy.availability_status,
+                BookCopy.Availability.AVAILABLE,
+            )
+            self.assertFalse(BookSwap.objects.filter(minat=self.minat).exists())

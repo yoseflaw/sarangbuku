@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -152,6 +154,22 @@ class ShelfTests(TestCase):
         })
         self.assertEqual(response.status_code, 404)
 
+    @patch("books.views.update_book_copy", side_effect=BookCopy.DoesNotExist)
+    def test_copy_edit_stale_ownership_returns_404(self, update_book_copy):
+        self.client.force_login(self.owner)
+        self.client.raise_request_exception = False
+
+        response = self.client.post(
+            reverse("books:copy_edit", args=[self.copy.pk]),
+            {
+                "condition": BookCopy.Condition.BAD,
+                "availability_status": BookCopy.Availability.UNAVAILABLE,
+            },
+        )
+
+        self.assertEqual(response.status_code, 404)
+        update_book_copy.assert_called_once()
+
     def test_copy_edit_changes_condition_note_availability(self):
         self.client.force_login(self.owner)
         response = self.client.post(reverse("books:copy_edit", args=[self.copy.pk]), {
@@ -208,6 +226,16 @@ class ShelfTests(TestCase):
         self.client.force_login(self.other_user)
         response = self.client.post(reverse("books:copy_delete", args=[self.copy.pk]))
         self.assertEqual(response.status_code, 404)
+
+    @patch("books.views.delete_book_copy", side_effect=BookCopy.DoesNotExist)
+    def test_copy_delete_stale_copy_returns_404(self, delete_book_copy):
+        self.client.force_login(self.owner)
+        self.client.raise_request_exception = False
+
+        response = self.client.post(reverse("books:copy_delete", args=[self.copy.pk]))
+
+        self.assertEqual(response.status_code, 404)
+        delete_book_copy.assert_called_once_with(copy_id=self.copy.pk, owner=self.owner)
 
     def test_copy_delete_anonymous_redirects_to_login(self):
         response = self.client.get(reverse("books:copy_delete", args=[self.copy.pk]))

@@ -15,6 +15,7 @@ class BookCopyAdmin(admin.ModelAdmin):
     list_filter = ("condition", "availability_status")
     search_fields = ("book__title", "book__authors", "book__isbn", "owner__email")
     list_select_related = ("book", "owner")
+    readonly_fields = ("owner", "book", "availability_status")
 
 
 @admin.register(WishlistItem)

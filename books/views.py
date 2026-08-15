@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Exists, OuterRef, Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -130,6 +131,8 @@ def copy_edit(request, pk):
                 condition_note=form.cleaned_data["condition_note"],
                 availability_status=form.cleaned_data["availability_status"],
             )
+        except BookCopy.DoesNotExist as error:
+            raise Http404 from error
         except ReservedCopyError as error:
             messages.error(request, str(error))
         else:
@@ -147,6 +150,8 @@ def copy_delete(request, pk):
     if request.method == "POST":
         try:
             delete_book_copy(copy_id=copy.pk, owner=request.user)
+        except BookCopy.DoesNotExist as error:
+            raise Http404 from error
         except (ReservedCopyError, HistoricalCopyError) as error:
             messages.error(request, str(error))
         else:

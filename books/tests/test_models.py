@@ -231,6 +231,10 @@ class AdminTests(SimpleTestCase):
         self.assertEqual(BookCopyAdmin.list_filter, ("condition", "availability_status"))
         self.assertEqual(BookCopyAdmin.search_fields, ("book__title", "book__authors", "book__isbn", "owner__email"))
         self.assertEqual(BookCopyAdmin.list_select_related, ("book", "owner"))
+        self.assertEqual(
+            BookCopyAdmin.readonly_fields,
+            ("owner", "book", "availability_status"),
+        )
 
     def test_wishlist_admin_is_registered(self):
         from django.contrib import admin

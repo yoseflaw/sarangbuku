@@ -14,12 +14,12 @@ class TukarTests(TestCase):
     def setUp(self):
         User = get_user_model()
         self.requester = User.objects.create_user(
-            email="requester@example.com",
+            email="peminta-pribadi@example.test",
             password="safe-test-password",
             display_name="Peminta Rahasia",
         )
         self.recipient = User.objects.create_user(
-            email="recipient@example.com",
+            email="penerima-pribadi@example.test",
             password="safe-test-password",
             display_name="Penerima Rahasia",
         )
@@ -29,17 +29,29 @@ class TukarTests(TestCase):
             display_name="Anggota Lain",
         )
         self.zone = SwapZone.objects.create(name="Blok M", description="Bertemu di lobi.")
-        self.other_zone = SwapZone.objects.create(
-            name="Kemang", description="Bertemu di taman."
+        self.private_zone_values = (
+            "DESKRIPSI-PRIBADI-KEMANG-RAHASIA",
+            "JADWAL-RAHASIA-SABTU-0600",
+            "ALAMAT-RAHASIA-JALAN-MELATI-99",
+            "KOORDINAT-RAHASIA-6-200000-106-816666",
         )
-        self.requester.swap_zones.add(self.zone)
-        self.recipient.swap_zones.add(self.zone)
+        self.other_zone = SwapZone.objects.create(
+            name="Kemang", description="; ".join(self.private_zone_values)
+        )
+        self.requester.swap_zones.add(self.zone, self.other_zone)
+        self.recipient.swap_zones.add(self.zone, self.other_zone)
         self.outsider.swap_zones.add(self.zone)
         self.requested = self.make_copy(
             self.recipient, "Matilda", BookCopy.Condition.GOOD, "Sampul sedikit terlipat."
         )
         self.offered = self.make_copy(
             self.requester, "Laskar Pelangi", BookCopy.Condition.VERY_GOOD, ""
+        )
+        self.unrelated_copy = self.make_copy(
+            self.requester,
+            "BUKU-PRIBADI-RAHASIA",
+            BookCopy.Condition.FAIR,
+            "CATATAN-PRIBADI-RAHASIA",
         )
         self.minat = Minat.objects.create(
             requester=self.requester,
@@ -102,8 +114,12 @@ class TukarTests(TestCase):
         newer_minat = Minat.objects.create(
             requester=self.recipient,
             recipient=self.requester,
-            requested_copy=self.offered,
-            offered_copy=self.requested,
+            requested_copy=self.make_copy(
+                self.requester, "Buku Baru Diminta", BookCopy.Condition.GOOD
+            ),
+            offered_copy=self.make_copy(
+                self.recipient, "Buku Baru Ditawarkan", BookCopy.Condition.GOOD
+            ),
             swap_zone=self.zone,
             status=Minat.Status.ACCEPTED,
             resolved_at=timezone.now(),
@@ -132,15 +148,26 @@ class TukarTests(TestCase):
         self.assertContains(response, reverse("swaps:swap_detail", args=[newer.pk]))
         self.assertNotContains(response, reverse("swaps:swap_detail", args=[other_swap.pk]))
 
-    def test_participants_see_names_but_never_contact_data(self):
+    def test_participants_see_names_but_not_private_data_or_owner_links(self):
+        private_values = (
+            self.requester.email,
+            self.recipient.email,
+            self.unrelated_copy.book.title,
+            self.unrelated_copy.book.authors,
+            self.unrelated_copy.condition_note,
+            *self.private_zone_values,
+        )
         for participant in (self.requester, self.recipient):
             with self.subTest(participant=participant.pk):
                 self.client.force_login(participant)
                 response = self.client.get(reverse("swaps:swap_detail", args=[self.swap.pk]))
+                content = response.content.decode()
                 self.assertContains(response, self.requester.display_name)
                 self.assertContains(response, self.recipient.display_name)
-                self.assertNotContains(response, self.requester.email)
-                self.assertNotContains(response, self.recipient.email)
+                for value in private_values:
+                    self.assertNotIn(value, content)
+                self.assertNotIn(f">{self.requester.display_name}</a>", content)
+                self.assertNotIn(f">{self.recipient.display_name}</a>", content)
 
         self.client.force_login(self.outsider)
         self.assertEqual(
